@@ -12,7 +12,7 @@ window.Miso = window.Miso || {};
 	standardise,
 
 	// Cached regexes
-	integerPattern = /[0-9]+/,
+	integerPattern = /^[0-9]+$/,
 	arrayNotationPattern = /\[([0-9]+)\]/;
 
 
