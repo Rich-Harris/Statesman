@@ -19,6 +19,8 @@ Different parts of your application might be interested in different things. You
 With Miso.Model each component *observes* the *keypath* it is interested in, e.g. `currentUser.avatar`, or even `currentUser.friends.length`. Then, when the model is updated with (for example) `model.set( 'currentUser', user )` those components will be notified, because their *observed keypaths* are *downstream* of the keypath that was *set*.
 
 
+
+
 Basic usage
 -----------
 
@@ -30,6 +32,8 @@ Initialising with data is optional (see *Creating new branches* below). Once you
 
     model.set( 'foo', 'bar' );
     model.get( 'foo' ); // returns 'bar'
+
+
 
 
 Observing (registering callbacks)
@@ -54,6 +58,8 @@ You can observe 'foo' with
     model.set( 'foo', 'bar' ); // does nothing - the callback does not trigger
 
 It returns an array, because under the hood `model.observe()` sets up observers for the specified keypath, and each of the *upstream keypaths*. Hence `model.observe( 'foo.bar.baz[0]', callback )` will return an array of four observers - one for 'foo.bar.baz[0]', one for 'foo.bar.baz', one for 'foo.bar', and one for 'foo'.
+
+
 
 
 Creating new branches
@@ -98,6 +104,8 @@ The model will now look like this...
     }
 
 (That said it would obviously be more efficient for your app to do `model.set( 'currentUser.friends', [ 'Bob', 'Charles' ] )` than setting them individually.) 
+
+
 
 
 Dependencies
