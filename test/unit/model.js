@@ -3,14 +3,13 @@ test( 'Miso.Model exists and is a function', function() {
 	ok( _.isFunction( Miso.Model ) );
 });
 
-test( 'Model instance has following methods: get, set, observe, unobserve, unobserveAll', function () {
+test( 'Model instance has following methods: get, set, observe, unobserve', function () {
 	var model = new Miso.Model();
 
 	ok( _.isFunction( model.get ) );
 	ok( _.isFunction( model.set ) );
 	ok( _.isFunction( model.observe ) );
 	ok( _.isFunction( model.unobserve ) );
-	ok( _.isFunction( model.unobserveAll ) );
 });
 
 test( 'Model instance has empty _data and _observers members', function () {
@@ -63,32 +62,29 @@ test( '.set() and .get() will work with array or dot notation for numbers', func
 	equal( model.get( 'foo.bar.0' ), 'baz' );
 });
 
-test( '.observe() returns an array of observer references', function () {
-	var model = new Miso.Model(), observerRefs;
+test( '.observe() returns an array of observers', function () {
+	var model = new Miso.Model(), observers;
 
-	observerRefs = model.observe( 'foo', function () {} );
-	ok( _.isArray( observerRefs ) && observerRefs[0] );
+	observers = model.observe( 'foo', function () {} );
+	ok( _.isArray( observers ) && observers[0] );
 });
 
-test( 'An observer reference has a keypath and an observer', function () {
-	var model = new Miso.Model(), observerRefs, observerRef;
+test( 'An observer has: observedKeypath, originalKeypath, callback, previousValue', function () {
+	var model, callback, observers, observer;
 
-	observerRefs = model.observe( 'foo', function () {} );
-	observerRef = observerRefs[0];
+	model = new Miso.Model({
+		foo: 'bar'
+	});
 
-	equal( observerRef.keypath, 'foo' );
-	ok( _.isObject( observerRef.observer ) );
-});
+	callback = function () {};
 
-test( 'An observer has an originalKeypath and a function callback', function () {
-	var model = new Miso.Model(), observerRefs, observerRef, observer;
+	observers = model.observe( 'foo', callback );
+	observer = observers[0];
 
-	observerRefs = model.observe( 'foo', function () {} );
-	observerRef = observerRefs[0];
-	observer = observerRef.observer;
-
+	equal( observer.observedKeypath, 'foo' );
 	equal( observer.originalKeypath, 'foo' );
-	ok( _.isFunction( observer.callback ) );
+	equal( observer.callback, callback );
+	equal( observer.previousValue, 'bar' );
 });
 
 test( 'Observing "foo" adds an observer to model._observers.foo', function () {
@@ -123,6 +119,25 @@ test( 'Observing "foo", then setting "foo" silently, does not trigger the callba
 
 	model.set( 'foo', 'bar', true ); // silent=true
 	equal( value, undefined );
+});
+
+test( 'Observers can be cancelled', function () {
+	var model, observers, triggered = 0;
+
+	model = new Miso.Model({
+		foo: 'bar'
+	});
+
+	observers = model.observe( 'foo', function () {
+		triggered += 1;
+	});
+
+	model.set( 'foo', 'baz' );
+
+	model.unobserve( observers );
+	model.set( 'foo', 'bar' );
+
+	equal( triggered, 1 );
 });
 
 test( 'Setting an item only triggers callbacks if the value changes', function () {

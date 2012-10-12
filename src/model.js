@@ -147,16 +147,16 @@ window.Miso = window.Miso || {};
 		//
 		//     model.set( 'foo', { bar: 'baz' } ); // alerts 'baz'
 		//
-		// Returns an array of 'observer references' which must be used
-		// with `model.unobserve()`. The length of said array is determined
-		// by the depth of the observed keypath, e.g. `'foo'` returns a single
-		// observer reference, `'foo.bar.baz[0]'` returns four - one for
+		// Returns an array of observers which must be used with
+		// `model.unobserve()`. The length of said array is determined
+		// by the depth of the observed keypath, e.g. `'foo'` returns a
+		// single observer, `'foo.bar.baz[0]'` returns four - one for
 		// the keypath itself, one for the three upstream branches
 		observe: function ( keypath, callback ) {
 			
 			var self = this,
 				originalKeypath,
-				observerRefs = [],
+				returnedObservers = [],
 				observe;
 
 			if ( !keypath ) {
@@ -173,16 +173,14 @@ window.Miso = window.Miso || {};
 				observers = self._observers[ keypath ] = ( self._observers[ keypath ] || [] );
 
 				observer = {
-					callback: callback,
+					observedKeypath: keypath,
 					originalKeypath: originalKeypath,
+					callback: callback,
 					previousValue: self.get( originalKeypath )
 				};
 
 				observers[ observers.length ] = observer;
-				observerRefs[ observerRefs.length ] = {
-					keypath: keypath,
-					observer: observer
-				};
+				returnedObservers[ returnedObservers.length ] = observer;
 			};
 
 			while ( keypath.lastIndexOf( '.' ) !== -1 ) {
@@ -195,14 +193,22 @@ window.Miso = window.Miso || {};
 
 			observe( keypath );
 
-			return observerRefs;
+			return returnedObservers;
 		},
 
-		// Cancel an observer. Primarily for internal use
-		unobserve: function ( observerRef ) {
+		// Cancel observer(s)
+		unobserve: function ( observerToCancel ) {
 			var observers, index, keypath;
 
-			keypath = standardise( observerRef.keypath );
+			// Allow a single observer, or an array
+			if ( _.isArray( observerToCancel ) ) {
+				while ( observerToCancel.length ) {
+					this.unobserve( observerToCancel.shift() );
+				}
+				return;
+			}
+
+			keypath = standardise( observerToCancel.observedKeypath );
 
 			observers = this._observers[ keypath ];
 			if ( !observers ) {
@@ -210,7 +216,7 @@ window.Miso = window.Miso || {};
 				return;
 			}
 
-			index = observers.indexOf( observerRef.observer );
+			index = observers.indexOf( observerToCancel );
 
 			if ( index === -1 ) {
 				// Nothing to unobserve
@@ -223,13 +229,6 @@ window.Miso = window.Miso || {};
 			// ...then tidy up if necessary
 			if ( observers.length === 0 ) {
 				delete this._observers[ keypath ];
-			}
-		},
-
-		// Cancel all observers
-		unobserveAll: function ( observerRefs ) {
-			while ( observerRefs.length ) {
-				this.unobserve( observerRefs.shift() );
 			}
 		},
 
