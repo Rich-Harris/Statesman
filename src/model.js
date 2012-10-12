@@ -1,6 +1,6 @@
 window.Miso = window.Miso || {};
 
-(function ( Miso, _ ) {
+(function ( Miso ) {
 
 	'use strict';
 
@@ -34,7 +34,7 @@ window.Miso = window.Miso || {};
 		//
 		// Branches in the model tree will be created as necessary (as
 		// arrays if appropriate, e.g.
-		// 
+		//
 		//     model.set( 'foo.bar[0]', 'baz' )
 		//     => { foo: { bar: [ 'baz' ] } }
 		//
@@ -142,7 +142,7 @@ window.Miso = window.Miso || {};
 		// e.g.
 		//
 		//     model.observe( 'foo.bar', function ( newValue, oldValue ) {
-		//       alert( newValue );	
+		//       alert( newValue );
 		//     });
 		//
 		//     model.set( 'foo', { bar: 'baz' } ); // alerts 'baz'
@@ -201,7 +201,7 @@ window.Miso = window.Miso || {};
 			var observers, index, keypath;
 
 			// Allow a single observer, or an array
-			if ( _.isArray( observerToCancel ) ) {
+			if ( observerToCancel.hasOwnProperty( 'length' ) ) {
 				while ( observerToCancel.length ) {
 					this.unobserve( observerToCancel.shift() );
 				}
@@ -307,4 +307,4 @@ window.Miso = window.Miso || {};
 		return splitKeypath( keypath ).join( '.' );
 	};
 
-}( Miso, _ ));
+}( Miso ));
