@@ -125,7 +125,11 @@ window.Miso = window.Miso || {};
 
 			result = this._data;
 			while ( keys.length ) {
-				result = result[ keys.shift() ];
+				try {
+					result = result[ keys.shift() ];
+				} catch ( err ) {
+					return undefined;
+				}
 				
 				if ( result === undefined ) {
 					return undefined;
