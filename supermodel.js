@@ -1,15 +1,14 @@
-window.Miso = window.Miso || {};
-
-(function ( Miso ) {
+(function ( global ) {
 
 	'use strict';
 
-	var
+	var Supermodel,
 
 	// Helper functions
 	splitKeypath,
 	parseArrayNotation,
 	standardise,
+	isEqual,
 
 	// Cached regexes
 	integerPattern = /^[0-9]+$/,
@@ -19,7 +18,7 @@ window.Miso = window.Miso || {};
 
 	// Constructor
 	// -----------
-	Miso.Model = function ( data ) {
+	Supermodel = function ( data ) {
 		this._data = data || {};
 		this._observers = {};
 	};
@@ -27,7 +26,7 @@ window.Miso = window.Miso || {};
 
 	// Prototype
 	// ---------
-	Miso.Model.prototype = {
+	Supermodel.prototype = {
 		
 		// Set item on our model. Can be deeper than the top layer, e.g.
 		// `model.set( 'foo.bar', 'baz' )`.
@@ -107,7 +106,7 @@ window.Miso = window.Miso || {};
 
 			// If `silent === false`, and either `force` is true or the new value
 			// is different to the old value, notify observers
-			if ( !silent && ( force || !_.isEqual( previous, value ) ) ) {
+			if ( !silent && ( force || !isEqual( previous, value ) ) ) {
 				this._notifyObservers( keypath, value, previous, force );
 			}
 		},
@@ -248,7 +247,7 @@ window.Miso = window.Miso || {};
 					value = self.get( observer.originalKeypath );
 
 					// If this value hasn't changed, skip the callback, unless `force === true`
-					if ( !force && _.isEqual( value, previousValue ) ) {
+					if ( !force && isEqual( value, previousValue ) ) {
 						continue;
 					}
 
@@ -311,4 +310,146 @@ window.Miso = window.Miso || {};
 		return splitKeypath( keypath ).join( '.' );
 	};
 
-}( Miso ));
+	// borrowed wholesale from underscore... TODO include license? write a Supermodel-optimised version?
+	isEqual = function ( a, b ) {
+		
+		var eq = function ( a, b, stack ) {
+
+			var toString, className, length, size, result, key;
+
+			toString = Object.prototype.toString;
+			
+			// Identical objects are equal. `0 === -0`, but they aren't identical.
+			// See the Harmony `egal` proposal: http://wiki.ecmascript.org/doku.php?id=harmony:egal.
+			if ( a === b ) {
+				return ( a !== 0 || ( 1 / a == 1 / b ) );
+			}
+			
+			// A strict comparison is necessary because `null == undefined`.
+			if ( a == null || b == null ) {
+				return a === b;
+			}
+			
+			// Compare `[[Class]]` names.
+			className = toString.call( a );
+			if ( className != toString.call( b ) ) {
+				return false;
+			}
+			
+			switch ( className ) {
+				// Strings, numbers, dates, and booleans are compared by value.
+				case '[object String]':
+					// Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
+					// equivalent to `new String("5")`.
+					return a == String( b );
+				
+				case '[object Number]':
+					// `NaN`s are equivalent, but non-reflexive. An `egal` comparison is performed for
+					// other numeric values.
+					return ( ( a != +a ) ? ( b != +b ) : ( a == 0 ? ( 1 / a == 1 / b ) : ( a == +b ) ) );
+				
+				case '[object Date]':
+				case '[object Boolean]':
+					// Coerce dates and booleans to numeric primitive values. Dates are compared by their
+					// millisecond representations. Note that invalid dates with millisecond representations
+					// of `NaN` are not equivalent.
+					return +a == +b;
+				// RegExps are compared by their source patterns and flags.
+				case '[object RegExp]':
+					return a.source == b.source &&
+						a.global == b.global &&
+						a.multiline == b.multiline &&
+						a.ignoreCase == b.ignoreCase;
+			}
+
+			if ( typeof a != 'object' || typeof b != 'object' ) {
+				return false;
+			}
+			
+			// Assume equality for cyclic structures. The algorithm for detecting cyclic
+			// structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
+			length = stack.length;
+			
+			while ( length-- ) {
+				// Linear search. Performance is inversely proportional to the number of
+				// unique nested structures.
+				if ( stack[length] == a ) {
+					return true;
+				}
+			}
+			
+			// Add the first object to the stack of traversed objects.
+			stack.push( a );
+
+			size = 0, result = true;
+			// Recursively compare objects and arrays.
+			
+			if ( className == '[object Array]' ) {
+				
+				// Compare array lengths to determine if a deep comparison is necessary.
+				size = a.length;
+				result = size == b.length;
+				
+				if ( result ) {
+					// Deep compare the contents, ignoring non-numeric properties.
+					while ( size-- ) {
+					// Ensure commutative equality for sparse arrays.
+						if ( !( result = size in a == size in b && eq( a[ size ], b[ size ], stack ) ) ) {
+							break;
+						}
+					}
+				}
+			} else {
+				// Objects with different constructors are not equivalent.
+				if ( 'constructor' in a != 'constructor' in b || a.constructor != b.constructor ) {
+					return false;
+				}
+				
+				// Deep compare objects.
+				for ( key in a ) {
+					if ( a.hasOwnProperty( key ) ) {
+						// Count the expected number of properties.
+						size++;
+						// Deep compare each member.
+						if ( !( result = b.hasOwnProperty( key ) && eq( a[ key ], b[ key ], stack ) ) ) {
+							break;
+						}
+					}
+				}
+
+				// Ensure that both objects contain the same number of properties.
+				if ( result ) {
+					for ( key in b ) {
+						if ( b.hasOwnProperty( key ) && !( size-- ) ) break;
+					}
+					result = !size;
+				}
+			}
+
+			// Remove the first object from the stack of traversed objects.
+			stack.pop();
+			return result;
+		};
+
+		return eq( a, b, [] );
+	};
+
+	
+
+	// CommonJS - add to exports
+	if ( typeof module !== 'undefined' && module.exports ) {
+		module.exports = Supermodel;
+	}
+
+	// AMD - define module
+	else if ( typeof define === 'function' && define.amd ) {
+		define( Supermodel );
+	}
+
+	// Browsers - create global variable
+	else {
+		global.Supermodel = Supermodel;
+	}
+	
+
+}( this ));

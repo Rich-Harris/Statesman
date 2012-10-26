@@ -1,7 +1,7 @@
-Miso.Model
+Supermodel
 ==========
 
-A general purpose observable model, to help you keep track of your application state. Miso.Model allows you to `set` and `get` *keypaths*, making it easy to work with a model of arbitrary complexity.
+A general purpose observable model, to help you keep track of your application state. Supermodel allows you to `set` and `get` *keypaths*, making it easy to work with a model of arbitrary complexity.
 
 For example, suppose your model looks like this:
 
@@ -16,7 +16,7 @@ For example, suppose your model looks like this:
 
 Different parts of your application might be interested in different things. You may want to display the avatar somewhere, render a highscore leaderboard somewhere else, display Alice's friends' statuses somewhere else, and so on.
 
-With Miso.Model each component *observes* the *keypath* it is interested in, e.g. `currentUser.avatar`, or even `currentUser.friends.length`. Then, when the model is updated with (for example) `model.set( 'currentUser', user )` those components will be notified, because their *observed keypaths* are *downstream* of the keypath that was *set*.
+With Supermodel each component *observes* the *keypath* it is interested in, e.g. `currentUser.avatar`, or even `currentUser.friends.length`. Then, when the model is updated with (for example) `model.set( 'currentUser', user )` those components will be notified, because their *observed keypaths* are *downstream* of the keypath that was *set*.
 
 
 
@@ -26,7 +26,7 @@ Basic usage
 
 Include model.js on your page. Then,
 
-    var model = new Miso.Model( data );
+    var model = new Supermodel( data );
 
 Initialising with data is optional (see *Creating new branches* below). Once your model is setup, you can set or get data like so:
 
@@ -67,7 +67,7 @@ Creating new branches
 
 If you set a keypath that is downstream of a non-existent branch, that branch will be created. In other words:
 
-    var model = new Miso.Model();
+    var model = new Supermodel();
 
     model.set( 'currentUser.name', 'Alice' );
 
@@ -111,4 +111,4 @@ The model will now look like this...
 Dependencies
 ------------
 
-Miso.Model has a dependency on underscore (or lodash, if you prefer) for the _.isEqual method.
+Supermodel has a dependency on underscore (or lodash, if you prefer) for the _.isEqual method.
