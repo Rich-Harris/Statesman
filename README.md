@@ -24,7 +24,7 @@ With Supermodel each component *observes* the *keypath* it is interested in, e.g
 Basic usage
 -----------
 
-Include model.js on your page. Then,
+Include Supermodel.js on your page. Then,
 
     var model = new Supermodel( data );
 
