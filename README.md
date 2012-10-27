@@ -108,7 +108,7 @@ The model will now look like this...
 
 
 
-Dependencies
-------------
+License
+-------
 
-Supermodel has a dependency on underscore (or lodash, if you prefer) for the _.isEqual method.
+WTFPL.

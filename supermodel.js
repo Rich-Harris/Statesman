@@ -443,7 +443,9 @@
 
 	// AMD - define module
 	else if ( typeof define === 'function' && define.amd ) {
-		define( Supermodel );
+		define( function () {
+			return Supermodel
+		});
 	}
 
 	// Browsers - create global variable
