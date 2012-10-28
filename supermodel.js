@@ -155,7 +155,7 @@
 		// by the depth of the observed keypath, e.g. `'foo'` returns a
 		// single observer, `'foo.bar.baz[0]'` returns four - one for
 		// the keypath itself, one for the three upstream branches
-		observe: function ( keypath, callback ) {
+		observe: function ( keypath, callback, initialize ) {
 			
 			var self = this,
 				originalKeypath,
@@ -195,6 +195,10 @@
 			}
 
 			observe( keypath );
+
+			if ( initialize ) {
+				callback( this.get( keypath ) );
+			}
 
 			return returnedObservers;
 		},
