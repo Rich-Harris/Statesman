@@ -220,11 +220,11 @@
 		},
 
 		observeOnce: function ( keypath, callback ) {
-			var self = this, suicidalObserver;
+			var self = this, suicidalObservers;
 
-			suicidalObserver = this.observe( keypath, function ( value, previousValue ) {
+			suicidalObservers = this.observe( keypath, function ( value, previousValue ) {
 				callback( value, previousValue );
-				self.unobserve( suicidalObserver );
+				self.unobserve( suicidalObservers );
 			});
 
 			return this;
