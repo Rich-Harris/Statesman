@@ -61,6 +61,34 @@ It returns an array, because under the hood `model.observe()` sets up observers 
 
 
 
+Initializing your observers
+---------------------------
+
+Often, you may want your observers to trigger immediately, rather than waiting for the first time `model.set` gets called. You can make that happen by passing in `true` as the third argument to `model.observe`:
+
+    model.set( 'foo', 'bar' );
+
+    model.observe( 'foo', function ( newValue, oldValue ) {
+        alert( newValue ); // alerts 'bar' immediately, because the third argument is true
+    }, true );
+
+    model.set( 'foo', 'baz' ); // alerts 'baz' as you'd expect
+
+
+
+Single-use observers
+--------------------
+
+If you know that a value will only be set once (for example, after some data has been loaded via AJAX or whatever), it's good hygiene to remove your observers after it has happened. `model.observeOnce` gives us a convenient way to do so:
+
+    model.observeOnce( 'foo', function ( newValue, oldValue ) {
+        alert( newValue );
+    });
+
+    model.set( 'foo', 'bar' ); // alerts 'bar'
+    model.set( 'foo', 'baz' ); // does nothing - the observer has already been removed
+
+
 
 Creating new branches
 ---------------------
@@ -111,4 +139,4 @@ The model will now look like this...
 License
 -------
 
-WTFPL.
+MIT: https://github.com/Rich-Harris/Supermodel/LICENSE-MIT
