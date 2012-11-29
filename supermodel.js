@@ -1,3 +1,15 @@
+/**
+* Supermodel.js - Keep track of your application state in style
+*
+* https://github.com/Rich-Harris/Supermodel
+*
+* Copyright (c) 2012 Rich Harris
+* MIT licensed - https://github.com/Rich-Harris/Supermodel/LICENSE-MIT
+*
+* Twitter: @rich_harris
+*/
+
+
 /*global module, define */
 
 (function ( global ) {
