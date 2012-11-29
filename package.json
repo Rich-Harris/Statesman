@@ -1,0 +1,19 @@
+{
+	"name": "Supermodel",
+	"description": "Keep track of your application state in style",
+	"version": "0.1.0",
+	"author": {
+		"name": "Rich Harris"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Rich-Harris/Supermodel.git"
+	},
+	"keywords": [ "model", "state" ],
+	"licenses": [
+		{
+			"type": "MIT",
+			"url": "https://github.com/Rich-Harris/Supermodel/blob/master/LICENSE-MIT"
+		}
+	]
+}
