@@ -35,6 +35,33 @@ Initialising with data is optional (see *Creating new branches* below). Once you
 
 
 
+Setting multiple keypaths in one go
+-----------------------------------
+
+The following are equivalent:
+
+    model.set( 'foo', 'bar' );
+    model.set( 'bar', 'baz' );
+
+and
+
+    model.set({
+        foo: 'bar',
+        bar: 'baz'
+    });
+
+This is convenient for setting your entire model in a single go:
+
+    $.ajax({
+        url: 'data.json',
+        success: function ( data ) {
+            model.set( data );
+        }
+    });
+
+Note that in the last example, any existing properties of the model would remain.
+
+
 
 Observing (registering callbacks)
 ---------------------------------
