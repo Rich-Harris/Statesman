@@ -152,11 +152,11 @@ upstream keypaths</p>             </td>             <td class="code">           
     <span class="p">},</span>
 
     <span class="nx">observeOnce</span><span class="o">:</span> <span class="kd">function</span> <span class="p">(</span> <span class="nx">keypath</span><span class="p">,</span> <span class="nx">callback</span> <span class="p">)</span> <span class="p">{</span>
-      <span class="kd">var</span> <span class="nx">self</span> <span class="o">=</span> <span class="k">this</span><span class="p">,</span> <span class="nx">suicidalObserver</span><span class="p">;</span>
+      <span class="kd">var</span> <span class="nx">self</span> <span class="o">=</span> <span class="k">this</span><span class="p">,</span> <span class="nx">suicidalObservers</span><span class="p">;</span>
 
-      <span class="nx">suicidalObserver</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">observe</span><span class="p">(</span> <span class="nx">keypath</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span> <span class="nx">value</span><span class="p">,</span> <span class="nx">previousValue</span> <span class="p">)</span> <span class="p">{</span>
+      <span class="nx">suicidalObservers</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">observe</span><span class="p">(</span> <span class="nx">keypath</span><span class="p">,</span> <span class="kd">function</span> <span class="p">(</span> <span class="nx">value</span><span class="p">,</span> <span class="nx">previousValue</span> <span class="p">)</span> <span class="p">{</span>
         <span class="nx">callback</span><span class="p">(</span> <span class="nx">value</span><span class="p">,</span> <span class="nx">previousValue</span> <span class="p">);</span>
-        <span class="nx">self</span><span class="p">.</span><span class="nx">unobserve</span><span class="p">(</span> <span class="nx">suicidalObserver</span> <span class="p">);</span>
+        <span class="nx">self</span><span class="p">.</span><span class="nx">unobserve</span><span class="p">(</span> <span class="nx">suicidalObservers</span> <span class="p">);</span>
       <span class="p">});</span>
 
       <span class="k">return</span> <span class="k">this</span><span class="p">;</span>

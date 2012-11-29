@@ -139,4 +139,4 @@ The model will now look like this...
 License
 -------
 
-MIT: https://github.com/Rich-Harris/Supermodel/LICENSE-MIT
+MIT: https://github.com/Rich-Harris/Supermodel/blob/master/LICENSE-MIT
