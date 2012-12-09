@@ -202,7 +202,7 @@
 			observe( keypath );
 
 			if ( initialize ) {
-				callback( this.get( keypath ) );
+				callback( this.get( originalKeypath ) );
 			}
 
 			return returnedObservers;
