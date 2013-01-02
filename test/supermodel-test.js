@@ -271,3 +271,21 @@ test( 'Observers are notified when downstream keypaths are set', function () {
 	
 	ok( triggered );
 });
+
+test( 'Observers are not notified when downstream keypaths are set but not changed', function () {
+	var triggered, model = new Supermodel({
+		foo: {
+			a: 1,
+			b: 2,
+			bar: 'baz'
+		}
+	});
+
+	model.observe( 'foo', function () {
+		triggered = true;
+	});
+
+	model.set( 'foo.bar', 'baz' );
+	
+	ok( !triggered );
+});
