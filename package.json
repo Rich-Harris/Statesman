@@ -1,7 +1,7 @@
 {
 	"name": "Supermodel",
 	"description": "Keep track of your application state in style",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"author": {
 		"name": "Rich Harris"
 	},
