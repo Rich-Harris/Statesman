@@ -1,11 +1,11 @@
 /**
 * Supermodel - Keep track of your application state in style
 *
-* v0.1.0 - 2012-11-29
+* v0.1.0 - 2013-01-02
 *
 * https://github.com/Rich-Harris/Supermodel.git
 *
-* Copyright (c) 2012 Rich Harris
+* Copyright (c) 2013 Rich Harris
 * Licensed MIT
 */
 
@@ -175,7 +175,7 @@
 			
 			var self = this,
 				originalKeypath,
-				returnedObservers = [],
+				observerGroup = [],
 				observe;
 
 			if ( !keypath ) {
@@ -195,11 +195,11 @@
 					observedKeypath: keypath,
 					originalKeypath: originalKeypath,
 					callback: callback,
-					previousValue: self.get( originalKeypath )
+					group: observerGroup
 				};
 
 				observers[ observers.length ] = observer;
-				returnedObservers[ returnedObservers.length ] = observer;
+				observerGroup[ observerGroup.length ] = observer;
 			};
 
 			while ( keypath.lastIndexOf( '.' ) !== -1 ) {
@@ -213,10 +213,12 @@
 			observe( keypath );
 
 			if ( initialize ) {
-				callback( this.get( keypath ) );
+				callback( this.get( originalKeypath ) );
 			}
 
-			return returnedObservers;
+			observerGroup.__previousValue = self.get( originalKeypath );
+
+			return observerGroup;
 		},
 
 		observeOnce: function ( keypath, callback ) {
@@ -270,23 +272,27 @@
 
 		// Internal publish method
 		_notifyObservers: function ( keypath, value, previousValue, force ) {
-			var self = this, observers = this._observers[ keypath ] || [], i, observer;
+			var self = this, observers = this._observers[ keypath ] || [], i, observer, actualValue;
 
 			for ( i=0; i<observers.length; i+=1 ) {
 				observer = observers[i];
 
+				previousValue = observer.group.__previousValue;
+				
 				if ( keypath !== observer.originalKeypath ) {
-					previousValue = observer.previousValue;
-					value = self.get( observer.originalKeypath );
-
-					// If this value hasn't changed, skip the callback, unless `force === true`
-					if ( !force && isEqual( value, previousValue ) ) {
-						continue;
-					}
-
-					observer.previousValue = value;
+					actualValue = self.get( observer.originalKeypath );
+				} else {
+					actualValue = value;
 				}
-				observer.callback( value, previousValue );
+
+				observer.group.__previousValue = actualValue;
+				
+				// If this value hasn't changed, skip the callback, unless `force === true`
+				if ( !force && isEqual( actualValue, previousValue ) ) {
+					continue;
+				}
+
+				observer.callback( actualValue, previousValue );
 			}
 		}
 	};
