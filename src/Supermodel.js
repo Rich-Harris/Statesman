@@ -164,7 +164,7 @@
 			
 			var self = this,
 				originalKeypath,
-				returnedObservers = [],
+				observerGroup = [],
 				observe;
 
 			if ( !keypath ) {
@@ -184,11 +184,11 @@
 					observedKeypath: keypath,
 					originalKeypath: originalKeypath,
 					callback: callback,
-					previousValue: self.get( originalKeypath )
+					group: observerGroup
 				};
 
 				observers[ observers.length ] = observer;
-				returnedObservers[ returnedObservers.length ] = observer;
+				observerGroup[ observerGroup.length ] = observer;
 			};
 
 			while ( keypath.lastIndexOf( '.' ) !== -1 ) {
@@ -205,7 +205,9 @@
 				callback( this.get( originalKeypath ) );
 			}
 
-			return returnedObservers;
+			observerGroup.__previousValue = self.get( originalKeypath );
+
+			return observerGroup;
 		},
 
 		observeOnce: function ( keypath, callback ) {
@@ -259,23 +261,27 @@
 
 		// Internal publish method
 		_notifyObservers: function ( keypath, value, previousValue, force ) {
-			var self = this, observers = this._observers[ keypath ] || [], i, observer;
+			var self = this, observers = this._observers[ keypath ] || [], i, observer, actualValue;
 
 			for ( i=0; i<observers.length; i+=1 ) {
 				observer = observers[i];
 
+				previousValue = observer.group.__previousValue;
+				
 				if ( keypath !== observer.originalKeypath ) {
-					previousValue = observer.previousValue;
-					value = self.get( observer.originalKeypath );
-
-					// If this value hasn't changed, skip the callback, unless `force === true`
-					if ( !force && isEqual( value, previousValue ) ) {
-						continue;
-					}
-
-					observer.previousValue = value;
+					actualValue = self.get( observer.originalKeypath );
+				} else {
+					actualValue = value;
 				}
-				observer.callback( value, previousValue );
+
+				observer.group.__previousValue = actualValue;
+				
+				// If this value hasn't changed, skip the callback, unless `force === true`
+				if ( !force && isEqual( actualValue, previousValue ) ) {
+					continue;
+				}
+
+				observer.callback( actualValue, previousValue );
 			}
 		}
 	};
