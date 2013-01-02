@@ -253,3 +253,24 @@ test( 'Notifications are skipped for values that haven\'t changed when upstream 
 
 	ok( !triggered );
 });
+
+test( 'Observers are notified when downstream keypaths are set', function () {
+	var triggered, model = new Supermodel({
+		foo: {
+			a: 1,
+			b: 2,
+			bar: 'baz'
+		}
+	});
+
+	model.observe( 'foo', function () {
+		triggered = true;
+	});
+
+	console.log( 'triggering?' );
+	model.set( 'foo.bar', 'boo' );
+	console.log( 'finished triggering?' );
+	console.log( model.get( 'foo' ) );
+
+	ok( triggered );
+});

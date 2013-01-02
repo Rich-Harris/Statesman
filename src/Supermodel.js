@@ -110,7 +110,7 @@
 			// If `silent === false`, and either `force` is true or the new value
 			// is different to the old value, notify observers
 			if ( !silent && ( force || !isEqual( previous, value ) ) ) {
-				this._notifyObservers( keypath, value, previous, force );
+				this._notifyObservers( keypath, value, force );
 			}
 
 			return this;
@@ -260,9 +260,10 @@
 		},
 
 		// Internal publish method
-		_notifyObservers: function ( keypath, value, previousValue, force ) {
-			var self = this, observers = this._observers[ keypath ] || [], i, observer, actualValue;
+		_notifyObservers: function ( keypath, value, force ) {
+			var self = this, observers = this._observers[ keypath ] || [], i, observer, actualValue, previousValue;
 
+			// Notify observers of this keypath, and any downstream keypaths
 			for ( i=0; i<observers.length; i+=1 ) {
 				observer = observers[i];
 
@@ -282,6 +283,26 @@
 				}
 
 				observer.callback( actualValue, previousValue );
+			}
+
+			// Notify upstream observers
+			while ( keypath.lastIndexOf( '.' ) !== -1 ) {
+				keypath = keypath.substr( 0, keypath.lastIndexOf( '.' ) );
+
+				observers = this._observers[ keypath ];
+
+				if ( !observers ) {
+					continue;
+				}
+
+				i = observers.length;
+				while ( i-- ) {
+					observer = observers[i];
+					if ( observer.observedKeypath === observer.originalKeypath ) {
+						value = this.get( keypath );
+						observer.callback( value ); // No such thing as previous value when dealing with objects (as opposed to primitives)
+					}
+				}
 			}
 		}
 	};
