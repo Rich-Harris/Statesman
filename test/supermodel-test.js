@@ -267,10 +267,7 @@ test( 'Observers are notified when downstream keypaths are set', function () {
 		triggered = true;
 	});
 
-	console.log( 'triggering?' );
 	model.set( 'foo.bar', 'boo' );
-	console.log( 'finished triggering?' );
-	console.log( model.get( 'foo' ) );
-
+	
 	ok( triggered );
 });
