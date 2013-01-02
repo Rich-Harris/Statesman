@@ -71,7 +71,7 @@ test( '.observe() returns an array of observers', function () {
 	ok( _.isArray( observers ) && observers[0] );
 });
 
-test( 'An observer has: observedKeypath, originalKeypath, callback, previousValue', function () {
+test( 'An observer has: observedKeypath, originalKeypath, callback, group', function () {
 	var model, callback, observers, observer;
 
 	model = new Supermodel({
@@ -86,7 +86,7 @@ test( 'An observer has: observedKeypath, originalKeypath, callback, previousValu
 	equal( observer.observedKeypath, 'foo' );
 	equal( observer.originalKeypath, 'foo' );
 	equal( observer.callback, callback );
-	equal( observer.previousValue, 'bar' );
+	equal( observer.group, observers );
 });
 
 test( 'Observing "foo" adds an observer to model._observers.foo', function () {
