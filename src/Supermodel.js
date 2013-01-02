@@ -44,10 +44,10 @@
 		// Set `force = true` to notify observers even if no change occurs
 		// (will do nothing if `silent === true`).
 		//
-		// Setting an item will also notify observers of downstream keypaths
+		// Setting an item will also notify observers of up/downstream keypaths
 		// e.g. an observer of `'foo.bar'` will be notified when `'foo'` changes
-		// (provided the `'bar'` property changes as a result) - `silent` and
-		// `force` still apply
+		// (provided the `'bar'` property changes as a result), and vice versa.
+		// `silent` and `force` still apply
 		set: function ( keypath, value, silent, force ) {
 			var k, keys, key, obj, i, branch, previous;
 
@@ -143,9 +143,8 @@
 			return result;
 		},
 
-		// Register a function to be called when the model changes. Not
-		// quite the same as 'subscribe', as upstream changes will cause
-		// notifications to fire
+		// Register a function to be called when the model changes, including
+		// as a result of up/downstream changes
 		//
 		// e.g.
 		//

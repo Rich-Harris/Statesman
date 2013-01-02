@@ -18,7 +18,7 @@ Different parts of your application might be interested in different things. You
 
 With Supermodel each component *observes* the *keypath* it is interested in, e.g. `currentUser.avatar`, or even `currentUser.friends.length`. Then, when the model is updated with (for example) `model.set( 'currentUser', user )` those components will be notified, because their *observed keypaths* are *downstream* of the keypath that was *set*.
 
-
+Conversely, if something is observing `currentUser`, and `currentUser.highscore` changes, it will be notified because the observed keypath is *upstream* of the one that was set.
 
 
 Basic usage
