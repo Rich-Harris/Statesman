@@ -1,5 +1,6 @@
 
 /*global module, define */
+/*jslint white: true, nomen: true, plusplus: true */
 
 (function ( global ) {
 
@@ -53,7 +54,7 @@
 		// (provided the `'bar'` property changes as a result), and vice versa.
 		// `silent` and `force` still apply.
 		set: function ( keypath, value, silent, force ) {
-			var k, keys, key, obj, i, branch, previous, computed;
+			var k, keys, key, obj, previous, computed;
 
 			// Multiple items can be set in one go:
 			//
@@ -160,7 +161,7 @@
 		// Get item from our model. Again, can be arbitrarily deep, e.g.
 		// `model.get( 'foo.bar.baz[0]' )`
 		get: function ( keypath ) {
-			var keys, result, computed, value;
+			var keys, result, computed;
 
 			if ( !keypath ) {
 				return undefined;
@@ -529,7 +530,7 @@
 
 	// turn `'foo.bar.baz'` into `['foo','bar','baz']`
 	splitKeypath = function ( keypath ) {
-		var firstPass, secondPass = [], numKeys, key, i, startIndex, pattern, match;
+		var firstPass, secondPass = [], i;
 
 		// Start by splitting on periods
 		firstPass = keypath.split( '.' );
