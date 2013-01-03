@@ -109,7 +109,9 @@
 			}
 
 			// Store previous value
-			previous = this.get( keypath, true );
+			this._referToCache = true;
+			previous = this.get( keypath );
+			this._referToCache = false;
 
 			// Split keypath (`'foo.bar.baz[0]'`) into keys (`['foo','bar','baz',0]`)
 			keys = splitKeypath( keypath );
@@ -157,18 +159,19 @@
 
 		// Get item from our model. Again, can be arbitrarily deep, e.g.
 		// `model.get( 'foo.bar.baz[0]' )`
-		get: function ( keypath, doNotCompute ) {
+		get: function ( keypath ) {
 			var keys, result, computed, value;
 
 			if ( !keypath ) {
 				return undefined;
 			}
 
-			// if we have a computed value with this ID, get it
-			if ( !doNotCompute ) {
+			// if we have a computed value with this ID, get it, unless we specifically
+			// want the cached value
+			if ( !this._referToCache ) {
 				computed = this._computed[ keypath ];
 				if ( computed && !computed.cache && !computed.override ) {
-					computed.setter( null, null ); // call setter, update data silently
+					computed.setter(); // call setter, update data silently
 				}
 			}
 
@@ -380,10 +383,10 @@
 
 			// Create setter function. This sets the `id` keypath to the value
 			// returned from `getter`.
-			setter = function ( value, previous, silent ) {
+			setter = function () {
 				computed.cache = true; // Prevent infinite loops by temporarily caching this value
 				self.computing = true;
-				self.set( id, getter(), silent, null );
+				self.set( id, getter() );
 				computed.cache = cache; // Return to normal behaviour
 			};
 
