@@ -1,7 +1,7 @@
 /**
-* Supermodel - Keep track of your application state in style
+* Supermodel - State management made sexy
 *
-* v0.1.1 - 2013-01-02
+* v0.1.2 - 2013-01-03
 *
 * https://github.com/Rich-Harris/Supermodel.git
 *
@@ -19,10 +19,12 @@
 	var Supermodel,
 
 	// Helper functions
+	dispatchQueue,
 	splitKeypath,
 	parseArrayNotation,
 	standardise,
 	isEqual,
+	indexOf,
 
 	// Cached regexes
 	integerPattern = /^[0-9]+$/,
@@ -35,6 +37,8 @@
 	Supermodel = function ( data ) {
 		this._data = data || {};
 		this._observers = {};
+		this._computed = {};
+		this._queue = [];
 	};
 
 
@@ -58,9 +62,9 @@
 		// Setting an item will also notify observers of up/downstream keypaths
 		// e.g. an observer of `'foo.bar'` will be notified when `'foo'` changes
 		// (provided the `'bar'` property changes as a result), and vice versa.
-		// `silent` and `force` still apply
+		// `silent` and `force` still apply.
 		set: function ( keypath, value, silent, force ) {
-			var k, keys, key, obj, i, branch, previous;
+			var k, keys, key, obj, i, branch, previous, computed;
 
 			// Multiple items can be set in one go:
 			//
@@ -70,6 +74,13 @@
 			//       three: 3
 			//     }, true );	// sets all three items silently
 			if ( typeof keypath === 'object' ) {
+				
+				// We don't want to dispatch callbacks straight away, as observers of
+				// computed values with multiple changed triggers will be notified
+				// multiple times. Instead, we queue the callbacks - later, they will
+				// be de-duped and dispatched.
+				this.queueing = true;
+
 				silent = value;
 				for ( k in keypath ) {
 					if ( keypath.hasOwnProperty( k ) ) {
@@ -77,11 +88,41 @@
 					}
 				}
 
-				return;
+				dispatchQueue( this._queue );
+				this.queueing = false;
+
+				return this;
 			}
-			
+
+			// Determine whether we're dealing with a computed value
+			computed = this._computed[ keypath ];
+			if ( computed ) {
+				
+				// Determine whether `.set()` was called 'manually', or by
+				// the computed value's observer
+				if ( !this.computing ) {
+					
+					// `.set()` was called manually - if the value is readonly,
+					// throw an error.
+					if ( computed.readonly ) {
+						throw 'The computed value "' + keypath + '" has readonly set true and cannot be changed manually';
+					}
+
+					// Flag the value as overridden so that `.get()` returns the
+					// correct value...
+					computed.override = true;
+				} else {
+
+					// until the next time the value is computed.
+					computed.override = false;
+					this.computing = false;
+				}
+			}
+
 			// Store previous value
+			this._referToCache = true;
 			previous = this.get( keypath );
+			this._referToCache = false;
 
 			// Split keypath (`'foo.bar.baz[0]'`) into keys (`['foo','bar','baz',0]`)
 			keys = splitKeypath( keypath );
@@ -130,10 +171,19 @@
 		// Get item from our model. Again, can be arbitrarily deep, e.g.
 		// `model.get( 'foo.bar.baz[0]' )`
 		get: function ( keypath ) {
-			var keys, result;
+			var keys, result, computed, value;
 
 			if ( !keypath ) {
 				return undefined;
+			}
+
+			// if we have a computed value with this ID, get it, unless we specifically
+			// want the cached value
+			if ( !this._referToCache ) {
+				computed = this._computed[ keypath ];
+				if ( computed && !computed.cache && !computed.override ) {
+					computed.setter(); // call setter, update data silently
+				}
 			}
 
 			keys = splitKeypath( keypath );
@@ -269,6 +319,126 @@
 			return this;
 		},
 
+		// Create a computed value
+		compute: function ( id, options ) {
+			var self = this, i, getter, setter, triggers, fn, cache, readonly, value, observerGroups, computed;
+
+			// Allow multiple values to be set in one go
+			if ( typeof id === 'object' ) {
+				
+				// We'll just use the `computed` variable, since it was lying
+				// around and won't be needed elsewhere
+				computed = {};
+
+				// Ditto i
+				for ( i in id ) {
+					if ( id.hasOwnProperty( i ) ) {
+						computed[ i ] = this.compute( i, id[ i ] );
+					}
+				}
+
+				return computed;
+			}
+
+			// If a computed value with this id already exists, remove it
+			if ( this._computed[ id ] ) {
+				this.removeComputedValue( id );
+			}
+
+			fn = options.fn;
+			triggers = options.triggers || options.trigger;
+			
+			// Ensure triggers is an array
+			if ( !triggers ) {
+				triggers = [];
+			}
+
+			if ( typeof triggers === 'string' ) {
+				triggers = [ triggers ];
+			}
+
+			// Throw an error if `id` is in `triggers`
+			if ( indexOf( id, triggers ) !== -1 ) {
+				throw 'A computed value cannot be its own trigger';
+			}
+
+			// If there are triggers, default `cache` to `true`. If not, set it to `false`
+			if ( triggers.length ) {
+				cache = ( options.cache === false ? false : true );
+			} else {
+				cache = false;
+			}
+
+			// Default to readonly
+			readonly = ( options.readonly === false ? false : true );
+
+
+			// Keep a reference to the observers, so we can remove this
+			// computed value later if needs be
+			observerGroups = [];
+
+			
+			// Create getter function. This is a wrapper for `fn`, which passes
+			// it the current values of any triggers that have been defined
+			getter = function () {
+				var i, args = [];
+
+				i = triggers.length;
+				while ( i-- ) {
+					args[i] = self.get( triggers[i] );
+				}
+
+				value = options.fn.apply( self, args );
+				return value;
+			};
+
+			// Create setter function. This sets the `id` keypath to the value
+			// returned from `getter`.
+			setter = function () {
+				computed.cache = true; // Prevent infinite loops by temporarily caching this value
+				self.computing = true;
+				self.set( id, getter() );
+				computed.cache = cache; // Return to normal behaviour
+			};
+
+			// Store reference to this computed value
+			computed = this._computed[ id ] = {
+				getter: getter,
+				setter: setter,
+				cache: cache || false,
+				readonly: readonly,
+				observerGroups: observerGroups
+			};
+
+			// Call our setter, to initialise the value
+			setter();
+
+			// watch our triggers
+			i = triggers.length;
+
+			// if there are no triggers, `cache` must be false, otherwise
+			// the value will never change
+			if ( !i && cache ) {
+				throw 'Cached computed values must have at least one trigger';
+			}
+
+			while ( i-- ) {
+				observerGroups[ observerGroups.length ] = this.observe( triggers[i], setter );
+			}
+
+			return value;
+		},
+
+		removeComputedValue: function ( id ) {
+			var observerGroups = this._computed[ id ].observerGroups;
+
+			while ( observerGroups.length ) {
+				this.unobserve( observerGroups.pop() );
+			}
+
+			delete this._computed[ id ];
+		},
+
 		// Internal publish method
 		_notifyObservers: function ( keypath, value, force ) {
 			var self = this, observers = this._observers[ keypath ] || [], i, observer, actualValue, previousValue;
@@ -292,7 +462,12 @@
 					continue;
 				}
 
-				observer.callback( actualValue, previousValue );
+				// If we are queueing callbacks, add this to the queue, otherwise fire immediately
+				if ( this.queueing ) {
+					this._addToQueue( observer.callback, actualValue, previousValue );
+				} else {
+					observer.callback( actualValue, previousValue );
+				}
 			}
 
 			// Notify upstream observers
@@ -310,16 +485,58 @@
 					observer = observers[i];
 					if ( observer.observedKeypath === observer.originalKeypath ) {
 						value = this.get( keypath );
-						observer.callback( value ); // No such thing as previous value when dealing with objects (as opposed to primitives)
+
+						// See above - add to the queue, or fire immediately
+						if ( this.queueing ) {
+							
+							// Since we're dealing with an object rather than a primitive (by
+							// definition, as this is an upstream observer), there is no
+							// distinction between the previous value and the current one -
+							// it is the same object, even if its contents have changed. That's
+							// why the next line looks a bit weird.
+							this._addToQueue( observer.callback, value, value );
+						} else {
+							observer.callback( value, value );
+						}
 					}
 				}
 			}
+		},
+
+		_addToQueue: function ( callback, value, previous ) {
+			var i;
+
+			// Remove queued item with this callback, if there is one
+			for ( i=0; i<this._queue.length; i+=1 ) {
+				if ( this._queue[i].c === callback ) {
+					this._queue.splice( i, 1 );
+					break;
+				}
+			}
+
+			// Append a new item
+			this._queue[ this._queue.length ] = {
+				c: callback,
+				v: value,
+				p: previous
+			};
 		}
 	};
 
 
 	// Helper functions
 	// ----------------
+
+	// De-dupe callbacks, then fire
+	dispatchQueue = function ( queue ) {
+		var item;
+
+		// Call each callback with the current and previous value
+		while ( queue.length ) {
+			item = queue.shift();
+			item.c( item.v, item.p );
+		}
+	};
 
 	// turn `'foo.bar.baz'` into `['foo','bar','baz']`
 	splitKeypath = function ( keypath ) {
@@ -385,6 +602,23 @@
 
 		// we're left with a primitive
 		return a === b;
+	};
+
+	indexOf = function ( needle, haystack ) {
+		var i;
+
+		if ( haystack.indexOf ) {
+			return haystack.indexOf( needle );
+		}
+
+		// IE, you bastard
+		for ( i=0; i<haystack.length; i+=1 ) {
+			if ( haystack[i] === needle ) {
+				return i;
+			}
+		}
+
+		return -1;
 	};
 
 	
