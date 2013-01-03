@@ -1,9 +1,11 @@
 Supermodel
 ==========
 
-A general purpose observable model, to help you keep track of your application state. Supermodel allows you to `set` and `get` *keypaths*, making it easy to work with a model of arbitrary complexity.
+**State management made sexy**
 
-For example, suppose your model looks like this:
+Supermodel.js is a general purpose observable model, to help you keep track of your application state. Supermodel allows you to `set` and `get` *keypaths*, making it easy to work with a model of arbitrary complexity.
+
+For example, suppose your data looks like this:
 
     {
         currentUser: {
@@ -19,6 +21,10 @@ Different parts of your application might be interested in different things. You
 With Supermodel each component *observes* the *keypath* it is interested in, e.g. `currentUser.avatar`, or even `currentUser.friends.length`. Then, when the model is updated with (for example) `model.set( 'currentUser', user )` those components will be notified, because their *observed keypaths* are *downstream* of the keypath that was *set*.
 
 Conversely, if something is observing `currentUser`, and `currentUser.highscore` changes, it will be notified because the observed keypath is *upstream* of the one that was set.
+
+You can also define *computed values*, which will update themselves when requested or when their *triggers* are changed, and which can be observed like regular values.
+
+Too much jargon? Okay, here's some examples.
 
 
 Basic usage
@@ -50,7 +56,7 @@ and
         bar: 'baz'
     });
 
-This is convenient for setting your entire model in a single go:
+This is convenient for setting your entire model in a single go, like so:
 
     $.ajax({
         url: 'data.json',
@@ -58,8 +64,6 @@ This is convenient for setting your entire model in a single go:
             model.set( data );
         }
     });
-
-Note that in the last example, any existing properties of the model would remain.
 
 
 
@@ -84,7 +88,7 @@ You can observe 'foo' with
 
     model.set( 'foo', 'bar' ); // does nothing - the callback does not trigger
 
-It returns an array, because under the hood `model.observe()` sets up observers for the specified keypath, and each of the *upstream keypaths*. Hence `model.observe( 'foo.bar.baz[0]', callback )` will return an array of four observers - one for 'foo.bar.baz[0]', one for 'foo.bar.baz', one for 'foo.bar', and one for 'foo'.
+(Boring technical detail: it returns an array, because under the hood `model.observe()` sets up observers for the specified keypath, and each of the *upstream keypaths*. Hence `model.observe( 'foo.bar.baz[0]', callback )` will return an array of four observers - one for 'foo.bar.baz[0]', one for 'foo.bar.baz', one for 'foo.bar', and one for 'foo'.)
 
 
 
@@ -115,6 +119,160 @@ If you know that a value will only be set once (for example, after some data has
     model.set( 'foo', 'bar' ); // alerts 'bar'
     model.set( 'foo', 'baz' ); // does nothing - the observer has already been removed
 
+
+
+Computed values
+---------------
+
+Sometimes what you're really interested in is a second-order property of your data - a combined string, an average, or a total, or something else entirely.
+
+Supermodel lets you create computed values using `model.compute`:
+
+    model = new Supermodel({
+        firstname: 'Gisele',
+        lastname: 'Bündchen'
+    });
+
+    model.compute( 'fullname', {
+        fn: function () {
+            return this.get( 'firstname' ) + ' ' + this.get( 'lastname' );
+        }
+    });
+
+    alert( model.get( 'fullname' ) ); // alerts 'Gisele Bündchen'
+
+That's all well and good, but a) the full name will be recomputed every time you call `model.get( 'fullname' )`, and b) observers of `fullname` won't be notified when it changes. We can fix that.
+
+
+Computed values with triggers
+-----------------------------
+
+We know when `fullname` will change in the example above - when either `firstname` or `lastname` do. We can describe that in code - note that `fn` is now passed the current values of its triggers as arguments:
+
+    model.compute( 'fullname', {
+        triggers: [ 'firstname', 'lastname' ],
+        fn: function ( firstname, lastname ) {
+            return firstname + ' ' + lastname;
+        }
+    });
+
+Now, we can observe `fullname` and be notified of its changed value when `firstname` and/or `lastname` change (if both are set simultaneously, the observer will only be notified once):
+
+    model.observe( 'fullname', function ( fullname ) {
+        alert( fullname );
+    });
+
+    model.set({
+        firstname: 'Kate',
+        lastname: 'Moss'
+    }); // alerts 'Kate Moss'
+
+
+Computed values and caching
+---------------------------
+
+Because we've specified that `fullname` is dependent on `firstname` and `lastname`, Supermodel does some work for us: when `firstname` or `lastname` change, it recalculates `fullname` and caches the value. Then, when you do `model.get( 'fullname' )`, it refers to the cache rather than recomputing it.
+
+Most of the time this is exactly what you want. But there are some situations - namely, where the computed value depends on things other than its triggers. In the example below, we explicitly disable caching so that the value is updated each time we `get` it:
+
+    model = new Supermodel({
+        startTime: +new Date()
+    });
+
+    // note below that you can use 'trigger' and 'triggers' interchangeably. If there is only one trigger,
+    // you don't have to wrap the name in an array - just pass in a string if you want
+    model.compute( 'elapsed', {
+        trigger: 'startTime',
+        fn: function ( startTime ) {
+            return Math.floor( ( +new Date() - startTime ) / 1000 );
+        },
+        cache: false
+    });
+
+    markTime = function () {
+        console.log( 'Seconds since start: ', model.get( 'elapsed' ) );
+    };
+
+    setInterval( markTime, 1000 ); // will count 1, 2, 3, 4... each second
+
+Observers of `elapsed` will only be notified when `startTime` changes, in this example - **not** when it is recomputed.
+
+
+Overriding computed values
+--------------------------
+
+Ordinarily, computed values are *read only*. For example, this will throw an error:
+
+    model = new Supermodel({
+        name: {
+            first: 'Gisele',
+            last: 'Bündchen'
+        }
+    });
+
+    model.compute( 'fullname', {
+        triggers: [ 'name' ],
+        fn: function ( name ) {
+            return name.first + ' ' + name.last;
+        }
+    });
+
+    model.set( 'fullname', 'Natalia Vodianova' ); // throws an error - 'fullname' is readonly
+
+However in some situations you may want to override a computed value. To do so set `readonly` to `false`:
+
+    model.compute( 'fullname', {
+        triggers: [ 'name' ],
+        fn: function ( name ) {
+            return name.first + ' ' + name.last;
+        },
+        readonly: false
+    });
+
+    model.set( 'fullname', 'Natalia Vodianova' );
+    alert( model.get( 'fullname' ) ); // alerts 'Natalia Vodianova'
+
+As soon as the computed value's triggers are updated, it reverts:
+
+    model.set( 'name', { first: 'Adriana', last: 'Lima' });
+    alert( model.get( 'fullname' ) ); // alerts 'Adriana Lima'
+
+
+A neat (but probably inadvisable) trick
+---------------------------------------
+
+Computed values that aren't readonly can have a bi-directional relationship:
+
+    // Compute fullname based on name...
+    model.compute( 'fullname', {
+        triggers: [ 'name' ],
+        fn: function ( name ) {
+            return name.first + ' ' + name.last;
+        },
+        readonly: false
+    });
+
+    // ...and vice versa...
+    model.compute( 'name', {
+        triggers: 'fullname',
+        fn: function ( fullname ) {
+            var split = fullname.split( ' ' );
+            return {
+                first: split[0],
+                last: split[1]
+            };
+        }
+    });
+
+    // ...so you can update your data from different angles without
+    // descending into the infinite loop vortex of hell
+    model.set( 'fullname', 'Cindy Crawford' );
+    alert( model.get( 'name.first' ) ); // alerts 'Cindy'
+
+    model.set( 'name.last', 'Margolis' );
+    alert( model.get( 'fullname' ) ); // alerts 'Cindy Margolis'
+
+I say inadvisable because if the computed values don't mirror each other exactly you'll probably eventually end up with some unexpected and hard to debug results. But it saves me a headache every now and then.
 
 
 Creating new branches
