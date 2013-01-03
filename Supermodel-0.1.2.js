@@ -80,7 +80,7 @@
 				// computed values with multiple changed triggers will be notified
 				// multiple times. Instead, we queue the callbacks - later, they will
 				// be de-duped and dispatched.
-				this.queueing = true;
+				this._queueing = true;
 
 				silent = value;
 				for ( k in keypath ) {
@@ -90,7 +90,7 @@
 				}
 
 				dispatchQueue( this._queue );
-				this.queueing = false;
+				this._queueing = false;
 
 				return this;
 			}
@@ -101,7 +101,7 @@
 				
 				// Determine whether `.set()` was called 'manually', or by
 				// the computed value's observer
-				if ( !this.computing ) {
+				if ( !this._computing ) {
 					
 					// `.set()` was called manually - if the value is readonly,
 					// throw an error.
@@ -116,7 +116,7 @@
 
 					// until the next time the value is computed.
 					computed.override = false;
-					this.computing = false;
+					this._computing = false;
 				}
 			}
 
@@ -397,7 +397,7 @@
 			// returned from `getter`.
 			setter = function () {
 				computed.cache = true; // Prevent infinite loops by temporarily caching this value
-				self.computing = true;
+				self._computing = true;
 				self.set( id, getter() );
 				computed.cache = cache; // Return to normal behaviour
 			};
@@ -464,7 +464,7 @@
 				}
 
 				// If we are queueing callbacks, add this to the queue, otherwise fire immediately
-				if ( this.queueing ) {
+				if ( this._queueing ) {
 					this._addToQueue( observer.callback, actualValue, previousValue );
 				} else {
 					observer.callback( actualValue, previousValue );
@@ -488,7 +488,7 @@
 						value = this.get( keypath );
 
 						// See above - add to the queue, or fire immediately
-						if ( this.queueing ) {
+						if ( this._queueing ) {
 							
 							// Since we're dealing with an object rather than a primitive (by
 							// definition, as this is an upstream observer), there is no
