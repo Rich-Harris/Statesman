@@ -1,6 +1,6 @@
 {
 	"name": "Supermodel",
-	"description": "Keep track of your application state in style",
+	"description": "State management made sexy",
 	"version": "0.1.2",
 	"author": {
 		"name": "Rich Harris"
