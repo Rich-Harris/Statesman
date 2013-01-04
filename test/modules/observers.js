@@ -1,5 +1,5 @@
 modules[ modules.length ] = {
-	name: 'Basic setup',
+	name: 'Observers',
 	tests: [
 		{
 			title: '.observe() returns an array of observers',
@@ -70,7 +70,7 @@ modules[ modules.length ] = {
 					value = val;
 				});
 
-				model.set( 'foo', 'bar', true ); // silent=true
+				model.set( 'foo', 'bar', { silent: true });
 				equal( value, undefined );
 			}
 		},
@@ -122,8 +122,8 @@ modules[ modules.length ] = {
 					i += 1;
 				});
 
-				model.set( 'foo', 'bar', null, true ); // force=true
-				model.set( 'foo', 'bar', null, true );
+				model.set( 'foo', 'bar', { force: true });
+				model.set( 'foo', 'bar', { force: true });
 
 				equal( i, 2 );
 			}
@@ -138,8 +138,8 @@ modules[ modules.length ] = {
 					i += 1;
 				});
 
-				model.set( 'foo', 'bar', true, true );
-				model.set( 'foo', 'bar', true, true );
+				model.set( 'foo', 'bar', { silent: true, force: true });
+				model.set( 'foo', 'bar', { silent: true, force: true });
 
 				equal( i, 0 );
 			}
