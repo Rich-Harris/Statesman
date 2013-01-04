@@ -24,7 +24,7 @@ Conversely, if something is observing `currentUser`, and `currentUser.highscore`
 
 You can also define *computed values*, which will update themselves when requested or when their *triggers* are changed, and which can be observed like regular values.
 
-Too much jargon? Okay, here's some examples.
+Did that make any sense? Okay, here's some examples.
 
 
 Basic usage
@@ -44,7 +44,7 @@ Initialising with data is optional (see *Creating new branches* below). Once you
 Setting multiple keypaths in one go
 -----------------------------------
 
-The following are equivalent:
+The following are basically equivalent:
 
     model.set( 'foo', 'bar' );
     model.set( 'bar', 'baz' );
@@ -65,12 +65,14 @@ This is convenient for setting your entire model in a single go, like so:
         }
     });
 
+I say *basically* equivalent, but they're not exactly equivalent. If you set multiple values that share an *observer* in one go, the observer will only be *notified* once. Speaking of which...
+
 
 
 Observing (registering callbacks)
 ---------------------------------
 
-You can observe 'foo' with
+You can observe `foo` with
 
     model.observe( 'foo', function ( newValue, oldValue ) {
         alert( newValue );
@@ -78,7 +80,7 @@ You can observe 'foo' with
 
     model.set( 'foo', 'bar' ); // alerts 'bar'
 
-`model.observe()` returns an array of *observers*, which can be passed to `model.unobserve()` to cancel themselves:
+`model.observe` returns an array of *observers*, which can be passed to `model.unobserve` to cancel themselves:
 
     var observers = model.observe( 'foo', function ( newValue, oldValue ) {
         alert( newValue );
@@ -88,7 +90,7 @@ You can observe 'foo' with
 
     model.set( 'foo', 'bar' ); // does nothing - the callback does not trigger
 
-(Boring technical detail: it returns an array, because under the hood `model.observe()` sets up observers for the specified keypath, and each of the *upstream keypaths*. Hence `model.observe( 'foo.bar.baz[0]', callback )` will return an array of four observers - one for 'foo.bar.baz[0]', one for 'foo.bar.baz', one for 'foo.bar', and one for 'foo'.)
+(Boring technical detail: it returns an array, because under the hood `model.observe` sets up observers for the specified keypath, and each of the *upstream keypaths*. Hence `model.observe( 'foo.bar.baz[0]', callback )` will return an array of four observers - one for 'foo.bar.baz[0]', one for 'foo.bar.baz', one for 'foo.bar', and one for 'foo'. Don't worry though - the specified `callback` is shared by all the observers, it doesn't create anonymous wrapper functions or do anything else that wastes memory.)
 
 
 
@@ -126,7 +128,7 @@ Computed values
 
 Sometimes what you're really interested in is a second-order property of your data - a combined string, an average, or a total, or something else entirely.
 
-Supermodel lets you create computed values using `model.compute`:
+Supermodel lets you create computed values using `model.compute`. Note that the value of `this` is the `model` instance:
 
     model = new Supermodel({
         firstname: 'Gisele',
@@ -197,6 +199,8 @@ Most of the time this is exactly what you want. But there are some situations - 
 
 Observers of `elapsed` will only be notified when `startTime` changes, in this example - **not** when it is recomputed.
 
+Note that computed values *without* triggers are **never** cached.
+
 
 Overriding computed values
 --------------------------
@@ -241,26 +245,30 @@ As soon as the computed value's triggers are updated, it reverts:
 A neat (but probably inadvisable) trick
 ---------------------------------------
 
-Computed values that aren't readonly can have a bi-directional relationship:
+Computed values that aren't readonly can have a bi-directional relationship. Note that in this example we are creating two computed values with a single call to `model.compute`:
 
-    // Compute fullname based on name...
-    model.compute( 'fullname', {
-        triggers: [ 'name' ],
-        fn: function ( name ) {
-            return name.first + ' ' + name.last;
+    
+    model.compute({
+        // Compute fullname based on name...
+        fullname: {
+            triggers: [ 'name' ],
+            fn: function ( name ) {
+                return name.first + ' ' + name.last;
+            },
+            readonly: false
         },
-        readonly: false
-    });
 
-    // ...and vice versa...
-    model.compute( 'name', {
-        triggers: 'fullname',
-        fn: function ( fullname ) {
-            var split = fullname.split( ' ' );
-            return {
-                first: split[0],
-                last: split[1]
-            };
+        // ...and vice versa...
+        name: {
+            triggers: 'fullname',
+            fn: function ( fullname ) {
+                var split = fullname.split( ' ' );
+                return {
+                    first: split[0],
+                    last: split[1]
+                };
+            },
+            readonly: false
         }
     });
 
