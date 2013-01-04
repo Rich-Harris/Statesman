@@ -11,24 +11,10 @@ window.onload = function () {
 		currentModule = modules[i];
 		currentTests = currentModule.tests;
 
-		runTest = function ( j ) {
-			test( currentTests[j].title, function () {
-				console.group( ++k );
-				
-				try {
-					currentTests[j].test();
-				} catch ( err ) {
-					console.error( err );
-				}
-
-				console.groupEnd();
-			});
-		};
-
-		QUnit.module( currentModule.name );
+		module( currentModule.name );
 
 		for ( j=0; j<currentTests.length; j+=1 ) {
-			runTest( j );
+			test( currentTests[j].title, currentTests[j].test );
 		}
 	};
 
