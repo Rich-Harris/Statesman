@@ -1,5 +1,3 @@
-> [Wiki](Home)
-
 Statesman.js - state management made straightforward
 ----------------------------------------------------
 
