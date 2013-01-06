@@ -4,7 +4,7 @@ modules[ modules.length ] = {
 		{
 			title: '.observe() returns an array of observers',
 			test: function () {
-				var model = new Supermodel(), observers;
+				var model = new Statesman(), observers;
 
 				observers = model.observe( 'foo', function () {} );
 				ok( _.isArray( observers ) && observers[0] );
@@ -16,7 +16,7 @@ modules[ modules.length ] = {
 			test: function () {
 				var model, callback, observers, observer;
 
-				model = new Supermodel({
+				model = new Statesman({
 					foo: 'bar'
 				});
 
@@ -35,7 +35,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Observing "foo" adds an observer to model._observers.foo',
 			test: function () {
-				var model = new Supermodel(), callback = function () {}, observer;
+				var model = new Statesman(), callback = function () {}, observer;
 
 				model.observe( 'foo', callback );
 				ok( _.isArray( model._observers.foo ) );
@@ -50,7 +50,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Observing "foo", then setting "foo", triggers the callback',
 			test: function () {
-				var model = new Supermodel(), value;
+				var model = new Statesman(), value;
 
 				model.observe( 'foo', function ( val ) {
 					value = val;
@@ -64,7 +64,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Observing "foo", then setting "foo" silently, does not trigger the callback',
 			test: function () {
-				var model = new Supermodel(), value;
+				var model = new Statesman(), value;
 
 				model.observe( 'foo', function ( val ) {
 					value = val;
@@ -80,7 +80,7 @@ modules[ modules.length ] = {
 			test: function () {
 				var model, observers, triggered = 0;
 
-				model = new Supermodel({
+				model = new Statesman({
 					foo: 'bar'
 				});
 
@@ -100,7 +100,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Setting an item only triggers callbacks if the value changes',
 			test: function () {
-				var model = new Supermodel(), i = 0;
+				var model = new Statesman(), i = 0;
 
 				model.observe( 'foo', function () {
 					i += 1;
@@ -116,7 +116,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Setting an item with force=true triggers callbacks even if there is no change',
 			test: function () {
-				var model = new Supermodel(), i = 0;
+				var model = new Statesman(), i = 0;
 
 				model.observe( 'foo', function () {
 					i += 1;
@@ -132,7 +132,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Silent > force',
 			test: function () {
-				var model = new Supermodel(), i = 0;
+				var model = new Statesman(), i = 0;
 
 				model.observe( 'foo', function () {
 					i += 1;
@@ -148,7 +148,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Callbacks are passed both new and previous value',
 			test: function () {
-				var model = new Supermodel(), oldValue, newValue;
+				var model = new Statesman(), oldValue, newValue;
 
 				model.observe( 'foo', function ( n, o ) {
 					newValue = n;
@@ -168,7 +168,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Setting a value causes downstream observers to be notified',
 			test: function () {
-				var model = new Supermodel(), value;
+				var model = new Statesman(), value;
 
 				model.observe( 'foo.bar', function ( val ) {
 					value = val;
@@ -183,7 +183,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Notifications are skipped for values that haven\'t changed when upstream values change',
 			test: function () {
-				var triggered, model = new Supermodel({
+				var triggered, model = new Statesman({
 					foo: {
 						a: 1,
 						b: 2,
@@ -204,7 +204,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Observers are notified when downstream keypaths are set',
 			test: function () {
-				var triggered, model = new Supermodel({
+				var triggered, model = new Statesman({
 					foo: {
 						a: 1,
 						b: 2,
@@ -225,7 +225,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Observers are not notified when downstream keypaths are set but not changed',
 			test: function () {
-				var triggered, model = new Supermodel({
+				var triggered, model = new Statesman({
 					foo: {
 						a: 1,
 						b: 2,

@@ -2,17 +2,17 @@ modules[ modules.length ] = {
 	name: 'Basic setup',
 	tests: [
 		{
-			title: 'Supermodel exists and is a function',
+			title: 'Statesman exists and is a function',
 			test: function () {
-				ok( Supermodel !== undefined );
-				ok( _.isFunction( Supermodel ) );
+				ok( Statesman !== undefined );
+				ok( _.isFunction( Statesman ) );
 			}
 		},
 
 		{
 			title: 'Model instance has following methods: get, set, observe, unobserve',
 			test: function () {
-				var model = new Supermodel();
+				var model = new Statesman();
 
 				ok( _.isFunction( model.get ) );
 				ok( _.isFunction( model.set ) );
@@ -24,7 +24,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Model instance has empty _data and _observers members',
 			test: function () {
-				var model = new Supermodel();
+				var model = new Statesman();
 
 				ok( _.isObject( model._data ) && _.isEmpty( model._data ) );
 				ok( _.isObject( model._observers ) && _.isEmpty( model._observers ) );
@@ -34,7 +34,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Model stores data passed in at initialization on the _data member',
 			test: function () {
-				var data = { foo: 'bar' }, model = new Supermodel( data );
+				var data = { foo: 'bar' }, model = new Statesman( data );
 
 				equal( data, model._data );
 			}

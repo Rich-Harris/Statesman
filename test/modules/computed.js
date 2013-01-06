@@ -4,7 +4,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Can create a computed value',
 			test: function () {
-				var model = new Supermodel({
+				var model = new Statesman({
 					foo: [ 1, 2, 3, 4 ]
 				});
 
@@ -28,7 +28,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Computed values update as expected',
 			test: function () {
-				var model = new Supermodel({
+				var model = new Statesman({
 					foo: [ 1, 2, 3, 4 ]
 				});
 
@@ -54,7 +54,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Computed values notify observers when their triggers change',
 			test: function () {
-				var result, model = new Supermodel({
+				var result, model = new Statesman({
 					foo: [ 1, 2, 3, 4 ]
 				});
 
@@ -86,7 +86,7 @@ modules[ modules.length ] = {
 			test: function () {
 				var model, sumResult, productResult;
 
-				model = new Supermodel({
+				model = new Statesman({
 					foo: [ 1, 2, 3, 4 ]
 				});
 
@@ -141,7 +141,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Computed values can be created without triggers',
 			test: function () {
-				var model = new Supermodel();
+				var model = new Statesman();
 
 				model.compute( 'foo', {
 					fn: function () {
@@ -156,7 +156,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Uncached computed values are computed once at initialisation, and once for each get()',
 			test: function () {
-				var triggered = 0, model = new Supermodel();
+				var triggered = 0, model = new Statesman();
 
 				model.compute( 'random', {
 					fn: function () {
@@ -178,7 +178,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Cached computed values are computed once at initialisation but not for subsequent get() calls',
 			test: function () {
-				var triggered = 0, model = new Supermodel();
+				var triggered = 0, model = new Statesman();
 
 				model.compute( 'random', {
 					triggers: 'foo',
@@ -202,7 +202,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Uncached computed values with triggers are triggered once for each time their triggers are changed',
 			test: function () {
-				var triggered = 0, model = new Supermodel({
+				var triggered = 0, model = new Statesman({
 					foo: 'bar'
 				});
 
@@ -230,7 +230,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Cached computed values with triggers are triggered once for each time their triggers are changed',
 			test: function () {
-				var triggered = 0, model = new Supermodel({
+				var triggered = 0, model = new Statesman({
 					foo: 'bar'
 				});
 
@@ -259,7 +259,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Computed values can have multiple triggers',
 			test: function () {
-				var result, model = new Supermodel({
+				var result, model = new Statesman({
 					firstname: 'Henry',
 					lastname: 'Jekyll'
 				});
@@ -286,7 +286,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Computed values that are downstream of their triggers do not result in infinite loops',
 			test: function () {
-				var triggered = 0, model = new Supermodel({
+				var triggered = 0, model = new Statesman({
 					name: {
 						first: 'what',
 						last: 'ever'
@@ -311,7 +311,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Computed values are readonly by default and cannot therefore be manually set',
 			test: function () {
-				var model = new Supermodel();
+				var model = new Statesman();
 
 				model.compute( 'foo', {
 					fn: function () {
@@ -330,7 +330,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Computed values can have the readonly flag set false, and can therefore be manually set',
 			test: function () {
-				var model = new Supermodel();
+				var model = new Statesman();
 
 				model.compute( 'foo', {
 					fn: function () {
@@ -347,7 +347,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Computed values can work in both directions without infinite loops',
 			test: function () {
-				var triggered = 0, model = new Supermodel({
+				var triggered = 0, model = new Statesman({
 					lower: 'foo',
 					upper: 'FOO'
 				});
@@ -383,7 +383,7 @@ modules[ modules.length ] = {
 		{
 			title: 'A computed value cannot be its own trigger',
 			test: function () {
-				var model = new Supermodel();
+				var model = new Statesman();
 
 				try {
 					model.compute( 'test', {
@@ -401,7 +401,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Computed values overwrite existing non-computed values',
 			test: function () {
-				var model = new Supermodel({
+				var model = new Statesman({
 					foo: 'bar'
 				});
 
@@ -418,7 +418,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Multiple computed values can be set in one go - the method will return a hash of values',
 			test: function () {
-				var computed, model = new Supermodel();
+				var computed, model = new Statesman();
 
 				computed = model.compute({
 					foo: {
@@ -440,7 +440,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Triggers can be set using "trigger" or "triggers"',
 			test: function () {
-				var model = new Supermodel({
+				var model = new Statesman({
 					value: 1
 				});
 
@@ -468,7 +468,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Computed values can be removed, and their observers will be detached',
 			test: function () {
-				var model = new Supermodel({
+				var model = new Statesman({
 					foo: 'bar',
 					bar: 'baz'
 				});
@@ -495,7 +495,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Observers of computed values will only be notified once if multiple triggers are changed simultaneously',
 			test: function () {
-				var triggered = 0, before, after, model = new Supermodel({
+				var triggered = 0, before, after, model = new Statesman({
 					firstname: 'Gisele',
 					lastname: 'Bündchen'
 				});

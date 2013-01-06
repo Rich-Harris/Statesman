@@ -4,7 +4,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Data passed in at initialization can be read with .get()',
 			test: function () {
-				var data = { foo: 'bar' }, model = new Supermodel( data );
+				var data = { foo: 'bar' }, model = new Statesman( data );
 
 				equal( data.foo, model.get( 'foo' ) );
 			}
@@ -13,7 +13,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Data can be set using .set() and got using .get()',
 			test: function () {
-				var model = new Supermodel();
+				var model = new Statesman();
 
 				model.set( 'foo', 'bar' );
 				equal( model.get( 'foo' ), 'bar' );
@@ -23,7 +23,7 @@ modules[ modules.length ] = {
 		{
 			title: '.get() will fetch nested data',
 			test: function () {
-				var data = { foo: { bar: 'baz' } }, model = new Supermodel( data );
+				var data = { foo: { bar: 'baz' } }, model = new Statesman( data );
 
 				equal( model.get( 'foo.bar' ), 'baz' );
 			}
@@ -32,7 +32,7 @@ modules[ modules.length ] = {
 		{
 			title: '.set() will set nested data',
 			test: function () {
-				var model = new Supermodel();
+				var model = new Statesman();
 
 				model.set( 'foo.bar', 'baz' );
 
@@ -43,7 +43,7 @@ modules[ modules.length ] = {
 		{
 			title: '.set() and .get() will work with array or dot notation for numbers',
 			test: function () {
-				var model = new Supermodel();
+				var model = new Statesman();
 
 				model.set( 'foo.bar[0]', 'baz' );
 				deepEqual( model._data, { foo: { bar: [ 'baz' ] } } );
@@ -56,7 +56,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Setting "foo.bar[0]" or "foo.bar.0" on an empty model causes foo.bar to be initialised as an array',
 			test: function () {
-				var model = new Supermodel();
+				var model = new Statesman();
 
 				model.set( 'foo.bar[0]', 'baz' );
 				ok( _.isArray( model.get( 'foo.bar' ) ) );
@@ -69,7 +69,7 @@ modules[ modules.length ] = {
 		{
 			title: 'Setting multiple keypaths in one go',
 			test: function () {
-				var model = new Supermodel();
+				var model = new Statesman();
 
 				model.set({
 					one: 1,

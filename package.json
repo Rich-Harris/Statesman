@@ -1,19 +1,19 @@
 {
-	"name": "Supermodel",
-	"description": "State management made sexy",
+	"name": "Statesman",
+	"description": "State management made straightforward",
 	"version": "0.1.2",
 	"author": {
 		"name": "Rich Harris"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/Rich-Harris/Supermodel.git"
+		"url": "https://github.com/Rich-Harris/Statesman.git"
 	},
 	"keywords": [ "model", "state" ],
 	"licenses": [
 		{
 			"type": "MIT",
-			"url": "https://github.com/Rich-Harris/Supermodel/blob/master/LICENSE-MIT"
+			"url": "https://github.com/Rich-Harris/Statesman/blob/master/LICENSE-MIT"
 		}
 	]
 }

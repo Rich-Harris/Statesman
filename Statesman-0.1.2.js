@@ -1,9 +1,9 @@
 /**
-* Supermodel - State management made sexy
+* Statesman - State management made straightforward
 *
-* v0.1.2 - 2013-01-03
+* v0.1.2 - 2013-01-06
 *
-* https://github.com/Rich-Harris/Supermodel.git
+* https://github.com/Rich-Harris/Statesman.git
 *
 * Copyright (c) 2013 Rich Harris
 * Licensed MIT
@@ -17,7 +17,7 @@
 
 	'use strict';
 
-	var Supermodel,
+	var Statesman,
 
 	// Helper functions
 	dispatchQueue,
@@ -33,9 +33,7 @@
 
 
 
-	// Constructor
-	// -----------
-	Supermodel = function ( data ) {
+	Statesman = function ( data ) {
 		this._data = data || {};
 		this._observers = {};
 		this._computed = {};
@@ -43,49 +41,23 @@
 	};
 
 
-	// Prototype
-	// ---------
-	Supermodel.prototype = {
+	Statesman.prototype = {
 		
-		// Set item on our model. Can be deeper than the top layer, e.g.
-		// `model.set( 'foo.bar', 'baz' )`.
-		//
-		// Branches in the model tree will be created as necessary (as
-		// arrays if appropriate, e.g.
-		//
-		//     model.set( 'foo.bar[0]', 'baz' )
-		//     => { foo: { bar: [ 'baz' ] } }
-		//
-		// Observers are notified if the value changes unless `silent = true`.
-		// Set `force = true` to notify observers even if no change occurs
-		// (will do nothing if `silent === true`).
-		//
-		// Setting an item will also notify observers of up/downstream keypaths
-		// e.g. an observer of `'foo.bar'` will be notified when `'foo'` changes
-		// (provided the `'bar'` property changes as a result), and vice versa.
-		// `silent` and `force` still apply.
-		set: function ( keypath, value, silent, force ) {
+		set: function ( keypath, value, options ) {
 			var k, keys, key, obj, previous, computed;
 
-			// Multiple items can be set in one go:
-			//
-			//     model.set({
-			//       one: 1,
-			//       two: 2,
-			//       three: 3
-			//     }, true );	// sets all three items silently
+			// allow multiple values to be set in one go
 			if ( typeof keypath === 'object' ) {
 				
-				// We don't want to dispatch callbacks straight away, as observers of
-				// computed values with multiple changed triggers will be notified
-				// multiple times. Instead, we queue the callbacks - later, they will
-				// be de-duped and dispatched.
+				// we don't want to notify observers straight away, or some observers
+				// will be notified multiple times. Instead, we queue the notifications -
+				// later, they will be de-duped and dispatched.
 				this._queueing = true;
 
-				silent = value;
+				options = value;
 				for ( k in keypath ) {
 					if ( keypath.hasOwnProperty( k ) ) {
-						this.set( k, keypath[k], silent );
+						this.set( k, keypath[k], options );
 					}
 				}
 
@@ -95,40 +67,44 @@
 				return this;
 			}
 
-			// Determine whether we're dealing with a computed value
+			// okay, now we're definitely dealing with a single value
+
+			options = options || {};
+
+			// determine whether we're dealing with a computed value
 			computed = this._computed[ keypath ];
 			if ( computed ) {
 				
-				// Determine whether `.set()` was called 'manually', or by
+				// determine whether `model.set` was called 'manually', or by
 				// the computed value's observer
 				if ( !this._computing ) {
 					
-					// `.set()` was called manually - if the value is readonly,
-					// throw an error.
+					// `model.set()` was called manually - if the value is readonly,
+					// throw an error
 					if ( computed.readonly ) {
 						throw 'The computed value "' + keypath + '" has readonly set true and cannot be changed manually';
 					}
 
-					// Flag the value as overridden so that `.get()` returns the
+					// flag the value as overridden so that `model.get` returns the
 					// correct value...
 					computed.override = true;
 				} else {
 
-					// until the next time the value is computed.
+					// ...until the next time the value is computed
 					computed.override = false;
 					this._computing = false;
 				}
 			}
 
-			// Store previous value
+			// store previous value
 			this._referToCache = true;
 			previous = this.get( keypath );
 			this._referToCache = false;
 
-			// Split keypath (`'foo.bar.baz[0]'`) into keys (`['foo','bar','baz',0]`)
+			// split keypath (`'foo.bar.baz[0]'`) into keys (`['foo','bar','baz',0]`)
 			keys = splitKeypath( keypath );
 
-			// Standardise keypath (without calling `standardise()`, since
+			// standardise keypath (without calling `standardise()`, since
 			// half the work is already done)
 			keypath = keys.join( '.' );
 
@@ -136,49 +112,47 @@
 			while ( keys.length > 1 ) {
 				key = keys.shift();
 
-				// Proceed down the tree. If we need to create a new branch, determine
+				// proceed down the tree. If we need to create a new branch, determine
 				// if it is a hash or an array
 				if ( !obj[ key ] ) {
 					
-					// If there is a numeric key following this one, create an array
+					// if there is a numeric key following this one, create an array
 					if ( keys[0] === parseInt( keys[0], 10 ) || integerPattern.test( keys[0] ) ) {
 						obj[ key ] = [];
 					}
 
-					// Otherwise create a hash
+					// otherwise create a hash
 					else {
 						obj[ key ] = {};
 					}
 				}
 
-				// Step down, then lather/rinse/repeat
+				// step down, then lather/rinse/repeat
 				obj = obj[ key ];
 			}
 
 			key = keys[0];
 
-			// Set the value
+			// set the value
 			obj[ key ] = value;
 
-			// If `silent === false`, and either `force` is true or the new value
+			// If `silent` is set to `false`, and either `force` is true or the new value
 			// is different to the old value, notify observers
-			if ( !silent && ( force || !isEqual( previous, value ) ) ) {
-				this._notifyObservers( keypath, value, force );
+			if ( !options.silent && ( options.force || !isEqual( previous, value ) ) ) {
+				this._notifyObservers( keypath, value, options.force );
 			}
 
 			return this;
 		},
 
-		// Get item from our model. Again, can be arbitrarily deep, e.g.
-		// `model.get( 'foo.bar.baz[0]' )`
 		get: function ( keypath ) {
 			var keys, result, computed;
 
 			if ( !keypath ) {
-				return undefined;
+				return this._data;
 			}
 
-			// if we have a computed value with this ID, get it, unless we specifically
+			// if we have a computed value with this keypath, get it, unless we specifically
 			// want the cached value
 			if ( !this._referToCache ) {
 				computed = this._computed[ keypath ];
@@ -205,22 +179,6 @@
 			return result;
 		},
 
-		// Register a function to be called when the model changes, including
-		// as a result of up/downstream changes
-		//
-		// e.g.
-		//
-		//     model.observe( 'foo.bar', function ( newValue, oldValue ) {
-		//       alert( newValue );
-		//     });
-		//
-		//     model.set( 'foo', { bar: 'baz' } ); // alerts 'baz'
-		//
-		// Returns an array of observers which must be used with
-		// `model.unobserve()`. The length of said array is determined
-		// by the depth of the observed keypath, e.g. `'foo'` returns a
-		// single observer, `'foo.bar.baz[0]'` returns four - one for
-		// the keypath itself, one for the three upstream branches
 		observe: function ( keypath, callback, initialize ) {
 			
 			var self = this,
@@ -271,6 +229,7 @@
 			return observerGroup;
 		},
 
+		
 		observeOnce: function ( keypath, callback ) {
 			var self = this, suicidalObservers;
 
@@ -279,10 +238,9 @@
 				self.unobserve( suicidalObservers );
 			});
 
-			return this;
+			return suicidalObservers;
 		},
 
-		// Cancel observer(s)
 		unobserve: function ( observerToCancel ) {
 			var observers, index, keypath;
 
@@ -320,30 +278,29 @@
 			return this;
 		},
 
-		// Create a computed value
-		compute: function ( id, options ) {
+		compute: function ( keypath, options ) {
 			var self = this, i, getter, setter, triggers, fn, cache, readonly, value, observerGroups, computed;
 
 			// Allow multiple values to be set in one go
-			if ( typeof id === 'object' ) {
+			if ( typeof keypath === 'object' ) {
 				
 				// We'll just use the `computed` variable, since it was lying
 				// around and won't be needed elsewhere
 				computed = {};
 
 				// Ditto i
-				for ( i in id ) {
-					if ( id.hasOwnProperty( i ) ) {
-						computed[ i ] = this.compute( i, id[ i ] );
+				for ( i in keypath ) {
+					if ( keypath.hasOwnProperty( i ) ) {
+						computed[ i ] = this.compute( i, keypath[ i ] );
 					}
 				}
 
 				return computed;
 			}
 
-			// If a computed value with this id already exists, remove it
-			if ( this._computed[ id ] ) {
-				this.removeComputedValue( id );
+			// If a computed value with this keypath already exists, remove it
+			if ( this._computed[ keypath ] ) {
+				this.removeComputedValue( keypath );
 			}
 
 			fn = options.fn;
@@ -358,8 +315,8 @@
 				triggers = [ triggers ];
 			}
 
-			// Throw an error if `id` is in `triggers`
-			if ( indexOf( id, triggers ) !== -1 ) {
+			// Throw an error if `keypath` is in `triggers`
+			if ( indexOf( keypath, triggers ) !== -1 ) {
 				throw 'A computed value cannot be its own trigger';
 			}
 
@@ -398,12 +355,12 @@
 			setter = function () {
 				computed.cache = true; // Prevent infinite loops by temporarily caching this value
 				self._computing = true;
-				self.set( id, getter() );
+				self.set( keypath, getter() );
 				computed.cache = cache; // Return to normal behaviour
 			};
 
 			// Store reference to this computed value
-			computed = this._computed[ id ] = {
+			computed = this._computed[ keypath ] = {
 				getter: getter,
 				setter: setter,
 				cache: cache || false,
@@ -430,14 +387,14 @@
 			return value;
 		},
 
-		removeComputedValue: function ( id ) {
-			var observerGroups = this._computed[ id ].observerGroups;
+		removeComputedValue: function ( keypath ) {
+			var observerGroups = this._computed[ keypath ].observerGroups;
 
 			while ( observerGroups.length ) {
 				this.unobserve( observerGroups.pop() );
 			}
 
-			delete this._computed[ id ];
+			delete this._computed[ keypath ];
 		},
 
 		// Internal publish method
@@ -528,7 +485,6 @@
 	// Helper functions
 	// ----------------
 
-	// De-dupe callbacks, then fire
 	dispatchQueue = function ( queue ) {
 		var item;
 
@@ -626,19 +582,19 @@
 
 	// CommonJS - add to exports
 	if ( typeof module !== 'undefined' && module.exports ) {
-		module.exports = Supermodel;
+		module.exports = Statesman;
 	}
 
 	// AMD - define module
 	else if ( typeof define === 'function' && define.amd ) {
 		define( function () {
-			return Supermodel;
+			return Statesman;
 		});
 	}
 
 	// Browsers - create global variable
 	else {
-		global.Supermodel = Supermodel;
+		global.Statesman = Statesman;
 	}
 	
 
