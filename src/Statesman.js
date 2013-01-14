@@ -187,11 +187,11 @@
 				initialize = callback;
 				for ( k in keypath ) {
 					if ( keypath.hasOwnProperty( k ) ) {
-						this.observe( k, keypath[k], initialize );
+						observerGroup[ observerGroup.length ] = this.observe( k, keypath[k], initialize );
 					}
 				}
 
-				return this;
+				return observerGroup;
 			}
 
 			// Standardise (`'foo[0]'`' => `'foo.0'`) and store keypath (for when we
@@ -403,6 +403,10 @@
 		},
 
 		subset: function ( path ) {
+			if ( !path ) {
+				throw 'No subset path specified';
+			}
+
 			if ( !this._subsets[ path ] ) {
 				this._subsets[ path ] = new Subset( path, this );
 			}
@@ -492,50 +496,6 @@
 				p: previous
 			};
 		}
-	};
-
-
-	// Static methods
-	// --------------
-
-	Statesman.extend = function ( methods ) {
-		var Child, childProto, parentProto, key;
-
-		Child = function ( data ) {
-			this._data = data || {};
-			this._observers = {};
-			this._computed = {};
-			this._queue = [];
-
-			if ( this.init ) {
-				this.init();
-			}
-		};
-
-		childProto = {};
-		parentProto = Statesman.prototype;
-
-		// add standard prototype methods
-		for ( key in parentProto ) {
-			if ( parentProto.hasOwnProperty( key ) ) {
-				childProto[ key ] = parentProto[ key ];
-			}
-		}
-
-		// child methods
-		for ( key in methods ) {
-			if ( methods.hasOwnProperty( key ) ) {
-				if ( childProto.hasOwnProperty( key ) ) {
-					throw 'You cannot overwrite the inbuilt prototype methods';
-				}
-
-				childProto[ key ] = methods[ key ];
-			}
-		}
-
-		Child.prototype = childProto;
-
-		return Child;
 	};
 
 
@@ -637,7 +597,8 @@
 
 
 	Subset = function( path, state ) {
-		this._path = path + '.';
+		this._path = path;
+		this._pathDot = path + '.';
 		this._root = state;
 	};
 
@@ -650,23 +611,27 @@
 			if ( typeof keypath === 'object' ) {
 				map = {};
 				for ( k in keypath ) {
-					map[ this._path + k ] = keypath[ k ];
+					map[ this._pathDot + k ] = keypath[ k ];
 				}
 
 				args[0] = map;
 			}
 
 			else {
-				args[0] = ( this._path + keypath );
+				args[0] = ( this._pathDot + keypath );
 			}
-			
+
 			this._root.set.apply( this._root, args );
 
 			return this;
 		},
 
 		get: function ( keypath ) {
-			return this._root.get( this._path + keypath );
+			if ( !keypath ) {
+				return this._root.get( this._path );
+			}
+
+			return this._root.get( this._pathDot + keypath );
 		},
 
 		observe: function ( keypath ) {
@@ -677,21 +642,21 @@
 			if ( typeof keypath === 'object' ) {
 				map = {};
 				for ( k in keypath ) {
-					map[ this._path + k ] = keypath[ k ];
+					map[ this._pathDot + k ] = keypath[ k ];
 				}
 
 				args[0] = map;
 			}
 
 			else {
-				args[0] = ( this._path + keypath );
+				args[0] = ( this._pathDot + keypath );
 			}
 			
 			return this._root.observe.apply( this._root, args );
 		},
 
 		observeOnce: function ( keypath, callback ) {
-			return this._root.observeOnce( this._path + keypath, callback );
+			return this._root.observeOnce( this._pathDot + keypath, callback );
 		},
 
 		unobserve: function ( observerToCancel ) {
@@ -703,12 +668,16 @@
 		compute: function ( keypath, options ) {
 			var self = this, k, map, processOptions, context, path;
 
-			path = this._path;
+			path = this._pathDot;
 
 			processOptions = function ( options ) {
 				var triggers, i;
 
 				triggers = options.triggers || options.trigger;
+
+				if ( typeof triggers === 'string' ) {
+					triggers = [ triggers ];
+				}
 
 				if ( triggers ) {
 					delete options.triggers;
@@ -731,22 +700,22 @@
 			if ( typeof keypath === 'object' ) {
 				map = {};
 				for ( k in keypath ) {
-					map[ this._path + k ] = processOptions( keypath[ k ] );
+					map[ this._pathDot + k ] = processOptions( keypath[ k ] );
 				}
 
 				return this._root.compute( map );
 			}
 
-			return this._root.compute( this._path + keypath, processOptions( options ) );
+			return this._root.compute( this._pathDot + keypath, processOptions( options ) );
 		},
 
 		removeComputedValue: function ( keypath ) {
-			this._root.removeComputedValue( this._path + keypath );
+			this._root.removeComputedValue( this._pathDot + keypath );
 			return this;
 		},
 
 		subset: function ( keypath ) {
-			return this._root.subset( this._path + keypath );
+			return this._root.subset( this._pathDot + keypath );
 		}
 	};
 
