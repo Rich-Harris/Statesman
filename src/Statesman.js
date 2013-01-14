@@ -6,7 +6,7 @@
 
 	'use strict';
 
-	var Statesman,
+	var Statesman, Subset,
 
 	// Helper functions
 	dispatchQueue,
@@ -26,6 +26,7 @@
 		this._data = data || {};
 		this._observers = {};
 		this._computed = {};
+		this._subsets = {};
 		this._queue = [];
 	};
 
@@ -173,10 +174,24 @@
 			var self = this,
 				originalKeypath,
 				observerGroup = [],
-				observe;
+				observe,
+				k;
 
 			if ( !keypath ) {
 				return undefined;
+			}
+
+			// set multiple observers at once
+			if ( typeof keypath === 'object' ) {
+				
+				initialize = callback;
+				for ( k in keypath ) {
+					if ( keypath.hasOwnProperty( k ) ) {
+						this.observe( k, keypath[k], initialize );
+					}
+				}
+
+				return this;
 			}
 
 			// Standardise (`'foo[0]'`' => `'foo.0'`) and store keypath (for when we
@@ -268,7 +283,7 @@
 		},
 
 		compute: function ( keypath, options ) {
-			var self = this, i, getter, setter, triggers, fn, cache, readonly, value, observerGroups, computed;
+			var self = this, i, getter, setter, triggers, fn, context, cache, readonly, value, observerGroups, computed;
 
 			// Allow multiple values to be set in one go
 			if ( typeof keypath === 'object' ) {
@@ -294,13 +309,12 @@
 
 			fn = options.fn;
 			triggers = options.triggers || options.trigger;
+			context = options.context || this;
 			
 			// Ensure triggers is an array
 			if ( !triggers ) {
 				triggers = [];
-			}
-
-			if ( typeof triggers === 'string' ) {
+			} else if ( typeof triggers === 'string' ) {
 				triggers = [ triggers ];
 			}
 
@@ -335,7 +349,7 @@
 					args[i] = self.get( triggers[i] );
 				}
 
-				value = options.fn.apply( self, args );
+				value = options.fn.apply( context, args );
 				return value;
 			};
 
@@ -384,6 +398,16 @@
 			}
 
 			delete this._computed[ keypath ];
+
+			return this;
+		},
+
+		subset: function ( path ) {
+			if ( !this._subsets[ path ] ) {
+				this._subsets[ path ] = new Subset( path, this );
+			}
+
+			return this._subsets[ path ];
 		},
 
 		// Internal publish method
@@ -468,6 +492,50 @@
 				p: previous
 			};
 		}
+	};
+
+
+	// Static methods
+	// --------------
+
+	Statesman.extend = function ( methods ) {
+		var Child, childProto, parentProto, key;
+
+		Child = function ( data ) {
+			this._data = data || {};
+			this._observers = {};
+			this._computed = {};
+			this._queue = [];
+
+			if ( this.init ) {
+				this.init();
+			}
+		};
+
+		childProto = {};
+		parentProto = Statesman.prototype;
+
+		// add standard prototype methods
+		for ( key in parentProto ) {
+			if ( parentProto.hasOwnProperty( key ) ) {
+				childProto[ key ] = parentProto[ key ];
+			}
+		}
+
+		// child methods
+		for ( key in methods ) {
+			if ( methods.hasOwnProperty( key ) ) {
+				if ( childProto.hasOwnProperty( key ) ) {
+					throw 'You cannot overwrite the inbuilt prototype methods';
+				}
+
+				childProto[ key ] = methods[ key ];
+			}
+		}
+
+		Child.prototype = childProto;
+
+		return Child;
 	};
 
 
@@ -565,6 +633,121 @@
 		}
 
 		return -1;
+	};
+
+
+	Subset = function( path, state ) {
+		this._path = path + '.';
+		this._root = state;
+	};
+
+	Subset.prototype = {
+		set: function ( keypath ) {
+			var args, k, map;
+
+			args = Array.prototype.slice.call( arguments );
+
+			if ( typeof keypath === 'object' ) {
+				map = {};
+				for ( k in keypath ) {
+					map[ this._path + k ] = keypath[ k ];
+				}
+
+				args[0] = map;
+			}
+
+			else {
+				args[0] = ( this._path + keypath );
+			}
+			
+			this._root.set.apply( this._root, args );
+
+			return this;
+		},
+
+		get: function ( keypath ) {
+			return this._root.get( this._path + keypath );
+		},
+
+		observe: function ( keypath ) {
+			var args, k, map;
+
+			args = Array.prototype.slice.call( arguments );
+
+			if ( typeof keypath === 'object' ) {
+				map = {};
+				for ( k in keypath ) {
+					map[ this._path + k ] = keypath[ k ];
+				}
+
+				args[0] = map;
+			}
+
+			else {
+				args[0] = ( this._path + keypath );
+			}
+			
+			return this._root.observe.apply( this._root, args );
+		},
+
+		observeOnce: function ( keypath, callback ) {
+			return this._root.observeOnce( this._path + keypath, callback );
+		},
+
+		unobserve: function ( observerToCancel ) {
+			this._root.unobserve( observerToCancel );
+
+			return this;
+		},
+
+		compute: function ( keypath, options ) {
+			var self = this, k, map, processOptions, context, path;
+
+			path = this._path;
+
+			processOptions = function ( options ) {
+				var triggers, i;
+
+				triggers = options.triggers || options.trigger;
+
+				if ( triggers ) {
+					delete options.triggers;
+					delete options.trigger;
+				}
+
+				i = triggers.length;
+				while ( i-- ) {
+					triggers[i] = path + triggers[i];
+				}
+
+				options.triggers = triggers;
+
+				if ( !options.context ) {
+					options.context = self;
+				}
+				return options;
+			};
+
+			if ( typeof keypath === 'object' ) {
+				map = {};
+				for ( k in keypath ) {
+					map[ this._path + k ] = processOptions( keypath[ k ] );
+				}
+
+				return this._root.compute( map );
+			}
+
+			return this._root.compute( this._path + keypath, processOptions( options ) );
+		},
+
+		removeComputedValue: function ( keypath ) {
+			this._root.removeComputedValue( this._path + keypath );
+			return this;
+		},
+
+		subset: function ( keypath ) {
+			return this._root.subset( this._path + keypath );
+		}
 	};
 
 	
