@@ -8,6 +8,7 @@ Statesman.js - state management made straightforward
 * [Basic usage](https://github.com/Rich-Harris/Statesman/wiki/Basic-usage) - creating a state model, getting and setting values
 * [Observers](https://github.com/Rich-Harris/Statesman/wiki/Observers) - responding to changes in the model
 * [Computed values](https://github.com/Rich-Harris/Statesman/wiki/Computed-values) - derived properties of the model
+* [Subsets](https://github.com/Rich-Harris/Statesman/wiki/Subsets) - zooming in on part of the model
 
 
 Why?
@@ -15,7 +16,7 @@ Why?
 
 Our webapps are getting richer and more complex. One consequence of this is that managing *state* is exponentially harder than it used to be. Different parts of an app have different responsibilities and may be split across many different files, but they all need to reflect the same underlying state.
 
-**Statesman.js** gives you a convenient way to model your app state, derive computed values from it, and monitor it for changes. It holds no opinions about how you structure your app, and plays nicely with whatever libraries you happen to be using. It has **no dependencies** and weighs less than **2kb** minifed and gzipped. It works on server or client, optionally as an AMD module.
+**Statesman.js** gives you a convenient way to model your app state, derive computed values from it, and monitor it for changes. It holds no opinions about how you structure your app, and plays nicely with whatever libraries you happen to be using. It has **no dependencies** and weighs less than **2.2kb** minifed and gzipped. It works on server or client, optionally as an AMD module.
 
 
 An example
