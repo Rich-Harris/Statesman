@@ -281,7 +281,25 @@ modules[ modules.length ] = {
 		{
 			title: 'Setting multiple observers returns an array of arrays of observers',
 			test: function () {
-				ok( false );
+				var observers, state;
+
+				state = new Statesman({
+					foo: 'bar',
+					bar: 'baz'
+				});
+
+				observers = state.observe({
+					foo: function () {
+						// do something
+					},
+					bar: function () {
+						// do something
+					}
+				});
+
+				ok( _.isArray( observers ) );
+				equal( observers.length, 2 );
+				ok( _.isArray( observers[0] ) && _.isArray( observers[1] ) );
 			}
 		}
 	]
