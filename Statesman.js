@@ -1,7 +1,7 @@
 /**
-* Statesman - State management made straightforward
+* statesman - State management made straightforward
 *
-* v0.1.3 - 2013-03-11
+* v0.1.4 - 2013-03-11
 *
 * https://github.com/Rich-Harris/Statesman.git
 *
@@ -186,11 +186,15 @@
 				observe,
 				k;
 
-			if ( !keypath ) {
-				return undefined;
+			// overload - allow observe to be called with no keypath (i.e. observe root)
+			if ( typeof keypath === 'function' ) {
+				initialize = callback;
+				callback = keypath;
+
+				keypath = '';
 			}
 
-			// set multiple observers at once
+			// overload - set multiple observers at once
 			if ( typeof keypath === 'object' ) {
 				
 				initialize = callback;
@@ -201,6 +205,11 @@
 				}
 
 				return observerGroup;
+			}
+
+			// check arguments are valid
+			if ( ( typeof keypath !== 'string' ) || typeof callback !== 'function' || ( initialize !== undefined && typeof initialize !== 'boolean' ) ) {
+				throw 'Invalid arguments to observe()';
 			}
 
 			// Standardise (`'foo[0]'`' => `'foo.0'`) and store keypath (for when we
@@ -425,7 +434,7 @@
 
 		// Internal publish method
 		_notifyObservers: function ( keypath, value, force ) {
-			var self = this, observers = this._observers[ keypath ] || [], i, observer, actualValue, previousValue;
+			var self = this, observers = this._observers[ keypath ] || [], i, observer, actualValue, previousValue, notifyObserversOf;
 
 			// Notify observers of this keypath, and any downstream keypaths
 			for ( i=0; i<observers.length; i+=1 ) {
@@ -454,37 +463,44 @@
 				}
 			}
 
-			// Notify upstream observers
-			while ( keypath.lastIndexOf( '.' ) !== -1 ) {
-				keypath = keypath.substr( 0, keypath.lastIndexOf( '.' ) );
-
-				observers = this._observers[ keypath ];
+			notifyObserversOf = function ( keypath ) {
+				var observers = self._observers[ keypath ], i;
 
 				if ( !observers ) {
-					continue;
+					return;
 				}
 
 				i = observers.length;
 				while ( i-- ) {
 					observer = observers[i];
 					if ( observer.observedKeypath === observer.originalKeypath ) {
-						value = this.get( keypath );
+						value = self.get( keypath );
 
 						// See above - add to the queue, or fire immediately
-						if ( this._queueing ) {
+						if ( self._queueing ) {
 							
 							// Since we're dealing with an object rather than a primitive (by
 							// definition, as this is an upstream observer), there is no
 							// distinction between the previous value and the current one -
 							// it is the same object, even if its contents have changed. That's
 							// why the next line looks a bit weird.
-							this._addToQueue( observer.callback, value, value );
+							self._addToQueue( observer.callback, value, value );
 						} else {
 							observer.callback( value, value );
 						}
 					}
 				}
+			};
+
+			// Notify upstream observers
+			while ( keypath.lastIndexOf( '.' ) !== -1 ) {
+				keypath = keypath.substr( 0, keypath.lastIndexOf( '.' ) );
+
+				notifyObserversOf( keypath );
 			}
+
+			// Notify observers of root
+			notifyObserversOf( '' );
 		},
 
 		_addToQueue: function ( callback, value, previous ) {
@@ -648,6 +664,18 @@
 
 			args = Array.prototype.slice.call( arguments );
 
+			// overload - omit keypath to observe root
+			if ( typeof keypath === 'function' ) {
+				args.unshift( this._path );
+				return this._root.observe.apply( this._root, args );
+			}
+
+			if ( keypath === '' ) {
+				args[0] = this._path;
+				return this._root.observe.apply( this._root, args );
+			}
+
+			// overload - observe multiple keypaths
 			if ( typeof keypath === 'object' ) {
 				map = {};
 				for ( k in keypath ) {
@@ -660,7 +688,7 @@
 			else {
 				args[0] = ( this._pathDot + keypath );
 			}
-			
+
 			return this._root.observe.apply( this._root, args );
 		},
 
