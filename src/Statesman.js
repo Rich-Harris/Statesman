@@ -625,12 +625,7 @@
 			args = Array.prototype.slice.call( arguments );
 
 			if ( typeof keypath === 'object' ) {
-				map = {};
-				for ( k in keypath ) {
-					map[ this._pathDot + k ] = keypath[ k ];
-				}
-
-				args[0] = map;
+				args.unshift( this._path );
 			}
 
 			else {
