@@ -118,3 +118,4 @@ Changelog
 * 0.1.1 - bug fixes, observers are now notified of downstream changes
 * 0.1.2 - computed values
 * 0.1.3 - tidied up API, removed docco docs in favour of wiki
+* 0.1.4 - can observe state model (or subset) root by omitting keypath

@@ -301,6 +301,29 @@ modules[ modules.length ] = {
 				equal( observers.length, 2 );
 				ok( _.isArray( observers[0] ) && _.isArray( observers[1] ) );
 			}
+		},
+
+		{
+			title: 'Omitting a keypath causes the entire state model to be observed',
+			test: function () {
+				var observers, state, currentFoo, currentBar;
+
+				state = new Statesman({
+					foo: 'bar',
+					bar: 'baz'
+				});
+
+				observers = state.observe( function ( state ) {
+					currentFoo = state.foo;
+					currentBar = state.bar;
+				});
+
+				state.set( 'foo', 'baz' );
+				state.set( 'bar', 'boo' );
+
+				equal( currentFoo, 'baz' );
+				equal( currentBar, 'boo' );
+			}
 		}
 	]
 };

@@ -101,6 +101,50 @@ modules[ modules.length ] = {
 		},
 
 		{
+			title: 'subset.observe() without a keypath observes the whole subset',
+			test: function () {
+				var state, subset, finalBar;
+
+				state = new Statesman({
+					foo: {
+						bar: 'baz'
+					}
+				});
+
+				subset = state.subset( 'foo' );
+
+				subset.observe( function ( subset ) {
+					finalBar = subset.bar;
+				});
+
+				state.set( 'foo.bar', 'ben' );
+				equal( finalBar, 'ben' );
+			}
+		},
+
+		{
+			title: 'subset.observe() with empty string observes the whole subset',
+			test: function () {
+				var state, subset, finalBar;
+
+				state = new Statesman({
+					foo: {
+						bar: 'baz'
+					}
+				});
+
+				subset = state.subset( 'foo' );
+
+				subset.observe( '', function ( subset ) {
+					finalBar = subset.bar;
+				});
+
+				state.set( 'foo.bar', 'ben' );
+				equal( finalBar, 'ben' );
+			}
+		},
+
+		{
 			title: 'Subset proxies state.observeOnce',
 			test: function () {
 				var state, subset, finalBar;
