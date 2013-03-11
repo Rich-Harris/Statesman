@@ -1,15 +1,13 @@
 /**
 * Statesman - State management made straightforward
 *
-* v0.1.2 - 2013-01-14
+* v0.1.3 - 2013-03-11
 *
 * https://github.com/Rich-Harris/Statesman.git
 *
 * Copyright (c) 2013 Rich Harris
 * Licensed MIT
 */
-
-
 /*global module, define */
 /*jslint white: true, nomen: true, plusplus: true */
 
