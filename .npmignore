@@ -1,0 +1,7 @@
+Statesman.wiki/
+src/
+test/
+.gitignore
+.gitmodules
+.jshintrc
+Gruntfile.js
