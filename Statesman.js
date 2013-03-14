@@ -1,7 +1,7 @@
 /**
 * statesman - State management made straightforward
 *
-* v0.1.4 - 2013-03-11
+* v0.1.4 - 2013-03-14
 *
 * https://github.com/Rich-Harris/Statesman.git
 *
@@ -634,12 +634,7 @@
 			args = Array.prototype.slice.call( arguments );
 
 			if ( typeof keypath === 'object' ) {
-				map = {};
-				for ( k in keypath ) {
-					map[ this._pathDot + k ] = keypath[ k ];
-				}
-
-				args[0] = map;
+				args.unshift( this._path );
 			}
 
 			else {
