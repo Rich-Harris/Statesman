@@ -51,7 +51,7 @@
 					}
 				}
 
-				dispatchQueue( this._queue );
+				this._dispatchQueue();
 				this._queueing = false;
 
 				return this;
@@ -234,7 +234,7 @@
 			observe( keypath );
 
 			if ( initialize ) {
-				callback( this.get( originalKeypath ) );
+				callback.call( this, this.get( originalKeypath ) );
 			}
 
 			observerGroup.__previousValue = self.get( originalKeypath );
@@ -247,7 +247,7 @@
 			var self = this, suicidalObservers;
 
 			suicidalObservers = this.observe( keypath, function ( value, previousValue ) {
-				callback( value, previousValue );
+				callback.call( self, value, previousValue );
 				self.unobserve( suicidalObservers );
 			});
 
@@ -450,7 +450,7 @@
 				if ( this._queueing ) {
 					this._addToQueue( observer.callback, actualValue, previousValue );
 				} else {
-					observer.callback( actualValue, previousValue );
+					observer.callback.call( this, actualValue, previousValue );
 				}
 			}
 
@@ -477,7 +477,7 @@
 							// why the next line looks a bit weird.
 							self._addToQueue( observer.callback, value, value );
 						} else {
-							observer.callback( value, value );
+							observer.callback.call( this, value, value );
 						}
 					}
 				}
@@ -511,22 +511,22 @@
 				v: value,
 				p: previous
 			};
+		},
+
+		_dispatchQueue: function () {
+			var item;
+
+			// Call each callback with the current and previous value
+			while ( this._queue.length ) {
+				item = this._queue.shift();
+				item.c.call( this, item.v, item.p );
+			}
 		}
 	};
 
 
 	// Helper functions
 	// ----------------
-
-	dispatchQueue = function ( queue ) {
-		var item;
-
-		// Call each callback with the current and previous value
-		while ( queue.length ) {
-			item = queue.shift();
-			item.c( item.v, item.p );
-		}
-	};
 
 	// turn `'foo.bar.baz'` into `['foo','bar','baz']`
 	splitKeypath = function ( keypath ) {

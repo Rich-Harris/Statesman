@@ -1,7 +1,7 @@
 /**
 * statesman - State management made straightforward
 *
-* v0.1.4 - 2013-03-14
+* v0.1.4 - 2013-04-06
 *
 * https://github.com/Rich-Harris/Statesman.git
 *
@@ -60,7 +60,7 @@
 					}
 				}
 
-				dispatchQueue( this._queue );
+				this._dispatchQueue();
 				this._queueing = false;
 
 				return this;
@@ -256,7 +256,7 @@
 			var self = this, suicidalObservers;
 
 			suicidalObservers = this.observe( keypath, function ( value, previousValue ) {
-				callback( value, previousValue );
+				callback.call( self, value, previousValue );
 				self.unobserve( suicidalObservers );
 			});
 
@@ -520,22 +520,22 @@
 				v: value,
 				p: previous
 			};
+		},
+
+		_dispatchQueue: function () {
+			var item;
+
+			// Call each callback with the current and previous value
+			while ( this._queue.length ) {
+				item = this._queue.shift();
+				item.c.call( this, item.v, item.p );
+			}
 		}
 	};
 
 
 	// Helper functions
 	// ----------------
-
-	dispatchQueue = function ( queue ) {
-		var item;
-
-		// Call each callback with the current and previous value
-		while ( queue.length ) {
-			item = queue.shift();
-			item.c( this, item.v, item.p );
-		}
-	};
 
 	// turn `'foo.bar.baz'` into `['foo','bar','baz']`
 	splitKeypath = function ( keypath ) {
