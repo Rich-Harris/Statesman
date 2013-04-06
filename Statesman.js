@@ -243,7 +243,7 @@
 			observe( keypath );
 
 			if ( initialize ) {
-				callback( this.get( originalKeypath ) );
+				callback.call( this, this.get( originalKeypath ) );
 			}
 
 			observerGroup.__previousValue = self.get( originalKeypath );
@@ -459,7 +459,7 @@
 				if ( this._queueing ) {
 					this._addToQueue( observer.callback, actualValue, previousValue );
 				} else {
-					observer.callback( actualValue, previousValue );
+					observer.callback.call( this, actualValue, previousValue );
 				}
 			}
 
@@ -486,7 +486,7 @@
 							// why the next line looks a bit weird.
 							self._addToQueue( observer.callback, value, value );
 						} else {
-							observer.callback( value, value );
+							observer.callback.call( this, value, value );
 						}
 					}
 				}
@@ -533,7 +533,7 @@
 		// Call each callback with the current and previous value
 		while ( queue.length ) {
 			item = queue.shift();
-			item.c( item.v, item.p );
+			item.c( this, item.v, item.p );
 		}
 	};
 
