@@ -119,3 +119,4 @@ Changelog
 * 0.1.2 - computed values
 * 0.1.3 - tidied up API, removed docco docs in favour of wiki
 * 0.1.4 - can observe state model (or subset) root by omitting keypath
+* 0.1.5 - subset observers' default context is the subset, tweaked API

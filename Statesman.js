@@ -1,7 +1,7 @@
 /**
 * statesman - State management made straightforward
 *
-* v0.1.4 - 2013-04-06
+* v0.1.5 - 2013-04-21
 *
 * https://github.com/Rich-Harris/Statesman.git
 *
@@ -18,7 +18,6 @@
 	var Statesman, Subset,
 
 	// Helper functions
-	dispatchQueue,
 	splitKeypath,
 	parseArrayNotation,
 	standardise,
@@ -178,17 +177,19 @@
 			return result;
 		},
 
-		observe: function ( keypath, callback, initialize ) {
+		observe: function ( keypath, callback, options ) {
 			
 			var self = this,
 				originalKeypath,
 				observerGroup = [],
 				observe,
-				k;
+				k,
+				init,
+				context;
 
 			// overload - allow observe to be called with no keypath (i.e. observe root)
 			if ( typeof keypath === 'function' ) {
-				initialize = callback;
+				options = callback;
 				callback = keypath;
 
 				keypath = '';
@@ -197,18 +198,22 @@
 			// overload - set multiple observers at once
 			if ( typeof keypath === 'object' ) {
 				
-				initialize = callback;
+				options = callback;
 				for ( k in keypath ) {
 					if ( keypath.hasOwnProperty( k ) ) {
-						observerGroup[ observerGroup.length ] = this.observe( k, keypath[k], initialize );
+						observerGroup[ observerGroup.length ] = this.observe( k, keypath[k], options );
 					}
 				}
 
 				return observerGroup;
 			}
 
+			if ( !options ) {
+				options = {};
+			}
+
 			// check arguments are valid
-			if ( ( typeof keypath !== 'string' ) || typeof callback !== 'function' || ( initialize !== undefined && typeof initialize !== 'boolean' ) ) {
+			if ( ( typeof keypath !== 'string' ) || ( typeof callback !== 'function' ) || ( typeof options !== 'object' ) ) {
 				throw 'Invalid arguments to observe()';
 			}
 
@@ -225,7 +230,8 @@
 					observedKeypath: keypath,
 					originalKeypath: originalKeypath,
 					callback: callback,
-					group: observerGroup
+					group: observerGroup,
+					context: options.context || self
 				};
 
 				observers[ observers.length ] = observer;
@@ -242,8 +248,9 @@
 
 			observe( keypath );
 
-			if ( initialize ) {
-				callback.call( this, this.get( originalKeypath ) );
+			// By default, initialise by calling the callback immediately
+			if ( !options.hasOwnProperty( 'init' ) || options.init ) {
+				callback.call( options.context || this, this.get( originalKeypath ) );
 			}
 
 			observerGroup.__previousValue = self.get( originalKeypath );
@@ -252,13 +259,19 @@
 		},
 
 		
-		observeOnce: function ( keypath, callback ) {
+		observeOnce: function ( keypath, callback, options ) {
 			var self = this, suicidalObservers;
 
+			if ( !options ) {
+				options = {};
+			}
+
+			options.init = false;
+
 			suicidalObservers = this.observe( keypath, function ( value, previousValue ) {
-				callback.call( self, value, previousValue );
+				callback.call( this, value, previousValue );
 				self.unobserve( suicidalObservers );
-			});
+			}, options );
 
 			return suicidalObservers;
 		},
@@ -402,7 +415,10 @@
 			}
 
 			while ( i-- ) {
-				observerGroups[ observerGroups.length ] = this.observe( triggers[i], setter );
+				observerGroups[ observerGroups.length ] = this.observe( triggers[i], setter, {
+					init: false, // we don't want to execute the setter for each trigger
+					context: context
+				});
 			}
 
 			return value;
@@ -457,9 +473,9 @@
 
 				// If we are queueing callbacks, add this to the queue, otherwise fire immediately
 				if ( this._queueing ) {
-					this._addToQueue( observer.callback, actualValue, previousValue );
+					this._addToQueue( observer.callback, actualValue, previousValue, observer.context || this );
 				} else {
-					observer.callback.call( this, actualValue, previousValue );
+					observer.callback.call( observer.context || this, actualValue, previousValue );
 				}
 			}
 
@@ -486,7 +502,7 @@
 							// why the next line looks a bit weird.
 							self._addToQueue( observer.callback, value, value );
 						} else {
-							observer.callback.call( this, value, value );
+							observer.callback.call( observer.context || this, value, value );
 						}
 					}
 				}
@@ -503,7 +519,7 @@
 			notifyObserversOf( '' );
 		},
 
-		_addToQueue: function ( callback, value, previous ) {
+		_addToQueue: function ( callback, value, previous, context ) {
 			var i;
 
 			// Remove queued item with this callback, if there is one
@@ -518,7 +534,8 @@
 			this._queue[ this._queue.length ] = {
 				c: callback,
 				v: value,
-				p: previous
+				p: previous,
+				cx: context
 			};
 		},
 
@@ -528,7 +545,7 @@
 			// Call each callback with the current and previous value
 			while ( this._queue.length ) {
 				item = this._queue.shift();
-				item.c.call( this, item.v, item.p );
+				item.c.call( item.cx, item.v, item.p );
 			}
 		}
 	};
@@ -654,41 +671,62 @@
 			return this._root.get( this._pathDot + keypath );
 		},
 
-		observe: function ( keypath ) {
+		observe: function ( keypath, callback, options ) {
 			var args, k, map;
 
 			args = Array.prototype.slice.call( arguments );
 
-			// overload - omit keypath to observe root
-			if ( typeof keypath === 'function' ) {
-				args.unshift( this._path );
-				return this._root.observe.apply( this._root, args );
-			}
-
-			if ( keypath === '' ) {
-				args[0] = this._path;
-				return this._root.observe.apply( this._root, args );
-			}
-
 			// overload - observe multiple keypaths
 			if ( typeof keypath === 'object' ) {
+				options = callback;
+
 				map = {};
 				for ( k in keypath ) {
 					map[ this._pathDot + k ] = keypath[ k ];
 				}
 
-				args[0] = map;
+				if ( options ) {
+					options.context = options.context || this;
+				} else {
+					options = { context: this };
+				}
+
+				return this._root.observe( map, options );
+			}
+
+			// overload - omit keypath to observe root
+			if ( typeof keypath === 'function' ) {
+				options = callback;
+				callback = keypath;
+				keypath = this._path;
+			}
+
+			else if ( keypath === '' ) {
+				keypath = this._path;
 			}
 
 			else {
-				args[0] = ( this._pathDot + keypath );
+				keypath = ( this._pathDot + keypath );
 			}
 
-			return this._root.observe.apply( this._root, args );
+			if ( options ) {
+				options.context = options.context || this;
+			} else {
+				options = { context: this };
+			}
+
+			return this._root.observe( keypath, callback, options );
 		},
 
-		observeOnce: function ( keypath, callback ) {
-			return this._root.observeOnce( this._pathDot + keypath, callback );
+		observeOnce: function ( keypath, callback, options ) {
+			if ( options ) {
+				options.context = options.context || this;
+			} else {
+				options = { context: this };
+			}
+
+			var observers = this._root.observeOnce( this._pathDot + keypath, callback, options );
+			return observers;
 		},
 
 		unobserve: function ( observerToCancel ) {
@@ -701,6 +739,8 @@
 			var self = this, k, map, processOptions, context, path;
 
 			path = this._pathDot;
+
+			options.context = options.context || this;
 
 			processOptions = function ( options ) {
 				var triggers, i;
