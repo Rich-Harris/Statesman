@@ -183,7 +183,7 @@ modules[ modules.length ] = {
 
 				observers = subset.observe( 'bar', function () {
 					triggered = true;
-				});
+				}, { init: false });
 
 				state.unobserve( observers );
 

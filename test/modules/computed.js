@@ -126,7 +126,7 @@ modules[ modules.length ] = {
 				// observe product
 				model.observe( 'product', function ( product ) {
 					productResult = product;
-				}, true );
+				});
 
 				equal( sumResult, 10 );
 				equal( productResult, 24 );

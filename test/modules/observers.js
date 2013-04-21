@@ -86,7 +86,7 @@ modules[ modules.length ] = {
 
 				observers = state.observe( 'foo', function () {
 					triggered += 1;
-				});
+				}, { init: false });
 
 				state.set( 'foo', 'baz' );
 
@@ -104,7 +104,7 @@ modules[ modules.length ] = {
 
 				state.observe( 'foo', function () {
 					i += 1;
-				});
+				}, { init: false });
 
 				state.set( 'foo', 'bar' );
 				state.set( 'foo', 'bar' );
@@ -120,7 +120,7 @@ modules[ modules.length ] = {
 
 				state.observe( 'foo', function () {
 					i += 1;
-				});
+				}, { init: false });
 
 				state.set( 'foo', 'bar', { force: true });
 				state.set( 'foo', 'bar', { force: true });
@@ -136,7 +136,7 @@ modules[ modules.length ] = {
 
 				state.observe( 'foo', function () {
 					i += 1;
-				});
+				}, { init: false });
 
 				state.set( 'foo', 'bar', { silent: true, force: true });
 				state.set( 'foo', 'bar', { silent: true, force: true });
@@ -193,7 +193,7 @@ modules[ modules.length ] = {
 
 				state.observe( 'foo.bar', function () {
 					triggered = true;
-				});
+				}, { init: false });
 
 				state.set( 'foo', { c: 3, d: 4, bar: 'baz' } );
 
@@ -235,7 +235,7 @@ modules[ modules.length ] = {
 
 				state.observe( 'foo', function () {
 					triggered = true;
-				});
+				}, { init: false });
 
 				state.set( 'foo.bar', 'baz' );
 				
