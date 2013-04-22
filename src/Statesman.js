@@ -32,6 +32,15 @@
 
 	Statesman.prototype = {
 		
+		reset: function ( data, options ) {
+			this._data = {};
+			this.set( data, { silent: true });
+
+			this._notifyAllObservers( options ? options.force : false );
+
+			return this;
+		},
+
 		set: function ( keypath, value, options ) {
 			var k, keys, key, obj, previous, computed;
 
@@ -61,8 +70,9 @@
 			options = options || {};
 
 			// determine whether we're dealing with a computed value
-			computed = this._computed[ keypath ];
-			if ( computed ) {
+			if ( this._computed.hasOwnProperty( keypath ) ) {
+				
+				computed = this._computed[ keypath ];
 				
 				// determine whether `model.set` was called 'manually', or by
 				// the computed value's observer
@@ -510,6 +520,30 @@
 			notifyObserversOf( '' );
 		},
 
+		_notifyAllObservers: function ( force ) {
+			var keypath, observers, observer, i, numObservers, previousValue, value;
+
+			for ( keypath in this._observers ) {
+				if ( this._observers.hasOwnProperty( keypath ) ) {
+					observers = this._observers[ keypath ];
+					numObservers = observers.length;
+
+					for ( i=0; i<numObservers; i+=1 ) {
+						observer = observers[i];
+
+						previousValue = observer.group.__previousValue;
+						value = this.get( observer.originalKeypath );
+
+						if ( force || !isEqual( value, previousValue ) ) {
+							observer.callback.call( observer.context || this, value, previousValue );
+						}
+						
+						observer.group.__previousValue = value;
+					}
+				}
+			}
+		},
+
 		_addToQueue: function ( callback, value, previous, context ) {
 			var i;
 
@@ -636,21 +670,29 @@
 	};
 
 	Subset.prototype = {
-		set: function ( keypath ) {
-			var args, k, map;
+		reset: function ( data ) {
+			this._root.set( this._path, data );
+			return this;
+		},
 
-			args = Array.prototype.slice.call( arguments );
+		set: function ( keypath, value, options ) {
+			var k, map;
 
 			if ( typeof keypath === 'object' ) {
-				args.unshift( this._path );
+				options = value;
+				map = {};
+
+				for ( k in keypath ) {
+					if ( keypath.hasOwnProperty( k ) ) {
+						map[ this._pathDot + k ] = keypath[ k ];
+					}
+				}
+				
+				this._root.set( map, options );
+				return this;
 			}
 
-			else {
-				args[0] = ( this._pathDot + keypath );
-			}
-
-			this._root.set.apply( this._root, args );
-
+			this._root.set( this._pathDot + keypath, value, options );
 			return this;
 		},
 
