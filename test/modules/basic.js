@@ -10,12 +10,13 @@ modules[ modules.length ] = {
 		},
 
 		{
-			title: 'Model instance has following methods: get, set, observe, unobserve',
+			title: 'Model instance has following methods: get, set, reset, observe, unobserve',
 			test: function () {
 				var model = new Statesman();
 
 				ok( _.isFunction( model.get ) );
 				ok( _.isFunction( model.set ) );
+				ok( _.isFunction( model.reset ) );
 				ok( _.isFunction( model.observe ) );
 				ok( _.isFunction( model.unobserve ) );
 			}

@@ -61,6 +61,54 @@ modules[ modules.length ] = {
 		},
 
 		{
+			title: 'subset.set augments rather than replaces',
+			test: function () {
+				var state, subset;
+
+				state = new Statesman({
+					foo: {
+						a: 1,
+						b: 2,
+						c: 3
+					}
+				});
+
+				subset = state.subset( 'foo' );
+
+				subset.set({
+					d: 4,
+					e: 5
+				});
+
+				deepEqual( subset.get(), { a: 1, b: 2, c: 3, d: 4, e: 5 });
+			}
+		},
+
+		{
+			title: 'subset.reset replaces rather than augments',
+			test: function () {
+				var state, subset;
+
+				state = new Statesman({
+					foo: {
+						a: 1,
+						b: 2,
+						c: 3
+					}
+				});
+
+				subset = state.subset( 'foo' );
+
+				subset.reset({
+					d: 4,
+					e: 5
+				});
+
+				deepEqual( subset.get(), { d: 4, e: 5 });
+			}
+		},
+
+		{
 			title: 'Subset proxies state.get',
 			test: function () {
 				var state, subset;
