@@ -58,6 +58,20 @@ module.exports = function(grunt) {
 				src: [ 'build/Statesman.js' ],
 				dest: 'build/Statesman.min.js'
 			}
+		},
+		copy: {
+			release: {
+				files: {
+					'release/<%= pkg.version %>/Statesman.js': '<%= concat.build.dest %>',
+					'release/<%= pkg.version %>/Statesman.min.js': '<%= uglify.build.dest %>'
+				}
+			},
+			shortcut: {
+				files: {
+					'Statesman.js': '<%= concat.build.dest %>',
+					'Statesman.min.js': '<%= uglify.build.dest %>'
+				}
+			}
 		}
 	});
 
@@ -67,8 +81,10 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks( 'grunt-contrib-qunit' );
 	grunt.loadNpmTasks( 'grunt-contrib-concat' );
 	grunt.loadNpmTasks( 'grunt-contrib-uglify' );
+	grunt.loadNpmTasks( 'grunt-contrib-copy' );
 
 	// default task
 	grunt.registerTask( 'default', [ 'concat', 'uglify', 'qunit' ] );
+	grunt.registerTask( 'release', [ 'default', 'copy' ] );
 
 };
