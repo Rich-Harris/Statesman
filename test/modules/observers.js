@@ -234,6 +234,7 @@ modules[ modules.length ] = {
 				});
 
 				state.observe( 'foo', function () {
+					console.log( 'triggering' );
 					triggered = true;
 				}, { init: false });
 

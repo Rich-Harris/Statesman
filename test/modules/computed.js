@@ -345,6 +345,24 @@ modules[ modules.length ] = {
 		},
 
 		{
+			title: 'Computed values with triggers can have the readonly flag set false, and can therefore be manually set',
+			test: function () {
+				var model = new Statesman();
+
+				model.compute( 'foo', {
+					triggers: [ 'ben' ],
+					fn: function () {
+						return 'bar';
+					},
+					readonly: false
+				});
+
+				model.set( 'foo', 'baz' );
+				equal( model.get( 'foo' ), 'baz' );
+			}
+		},
+
+		{
 			title: 'Computed values can work in both directions without infinite loops',
 			test: function () {
 				var triggered = 0, model = new Statesman({

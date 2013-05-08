@@ -1,4 +1,6 @@
-var modules = [];
+var modules = [], k=0;
+
+QUnit.config.reorder = false;
 
 window.onload = function () {
 	var i, j, k, runModuleTests;
@@ -13,8 +15,18 @@ window.onload = function () {
 
 		module( currentModule.name );
 
+		runTest = function ( currentTest ) {
+			test( currentTest.title, function () {
+				console.group( ++k );
+
+				currentTest.test();
+
+				console.groupEnd();
+			});
+		};
+
 		for ( j=0; j<currentTests.length; j+=1 ) {
-			test( currentTests[j].title, currentTests[j].test );
+			runTest( currentTests[j] );
 		}
 	};
 

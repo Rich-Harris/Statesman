@@ -26,11 +26,19 @@ module.exports = function(grunt) {
 			}
 		},
 
+		watch: {
+			js: {
+				files: [ 'src/Statesman.js', 'src/Subset.js' ],
+				tasks: 'concat',
+				interrupt: true
+			}
+		},
+
 		jshint: {
 			options: {
 				jshintrc: '.jshintrc'
 			},
-			files: [ 'Gruntfile.js', 'src/Statesman.js' ]
+			files: [ 'Gruntfile.js', 'build/Statesman.js' ]
 		},
 		qunit: {
 			all: [ 'test/index.html' ]
@@ -50,20 +58,17 @@ module.exports = function(grunt) {
 				src: [ 'build/Statesman.js' ],
 				dest: 'build/Statesman.min.js'
 			}
-		},
-		watch: {
-			files: '<config:jshint.files>',
-			tasks: 'jshint test'
 		}
 	});
 
 
+	grunt.loadNpmTasks( 'grunt-contrib-watch' );
 	grunt.loadNpmTasks( 'grunt-contrib-jshint' );
 	grunt.loadNpmTasks( 'grunt-contrib-qunit' );
 	grunt.loadNpmTasks( 'grunt-contrib-concat' );
 	grunt.loadNpmTasks( 'grunt-contrib-uglify' );
 
 	// default task
-	grunt.registerTask( 'default', [ 'jshint', 'concat', 'uglify', 'qunit' ] );
+	grunt.registerTask( 'default', [ 'concat', 'uglify', 'qunit' ] );
 
 };

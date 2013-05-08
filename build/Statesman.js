@@ -1,4 +1,4 @@
-/*! Statesman - v0.1.5 - 2013-04-23
+/*! Statesman - v0.1.5 - 2013-05-08
 * State management made straightforward
 
 * 
@@ -78,45 +78,60 @@ var Statesman = (function () {
 
 			// okay, now we're definitely dealing with a single value
 
+
+			keypath = normalise( keypath );
+
+
+
+			computed = this._computed[ keypath ];
+
+			previous = this._referToCache ? this._cache[ keypath ] : this.get( keypath );
+
 			options = options || {};
 
+			// if the value hasn't changed, we can save ourselves a bunch of work
+			if ( previous === value ) {
+				// if it's an object, or force === true, we still need to notify observers
+				// (unless silent is also true, in which case we ignore force)
+				if ( !isEqual( previous, value ) || ( options.force && !options.silent ) ) {
+					this._notifyObservers( keypath, options.force );
+				}
+
+				return;
+			}
+
 			// determine whether we're dealing with a computed value
-			if ( this._computed.hasOwnProperty( keypath ) ) {
-				
-				computed = this._computed[ keypath ];
+			if ( computed = this._computed[ keypath ] ) {
 				
 				// determine whether `model.set` was called 'manually', or by
 				// the computed value's observer
-				if ( !this._computing ) {
-					
-					// `model.set()` was called manually - if the value is readonly,
-					// throw an error
+				if ( this._computing ) {
+					// `model.set()` was called by the computed's setter
+
+					// if the override flag was previously set, we can unset it now
+					computed.override = false;
+				}
+
+				else {
+					// `model.set()` was called manually...
 					if ( computed.readonly ) {
+						// ...but it's a readonly value
 						throw 'The computed value "' + keypath + '" has readonly set true and cannot be changed manually';
 					}
 
-					// flag the value as overridden so that `model.get` returns the
-					// correct value...
-					computed.override = true;
-				} else {
-
-					// ...until the next time the value is computed
-					computed.override = false;
-					this._computing = false;
+					else {
+						// ...and it's not readonly, so we flag it as overridden so we can `get()` the
+						// overridden value later
+						computed.override = true;
+					}
 				}
 			}
 
-			// store previous value
-			this._referToCache = true;
-			previous = this.get( keypath );
-			this._referToCache = false;
+			// Clear the cache, so the next time we `get()` this value, it will be up to date
+			this._clearCache( keypath );
 
-			// split keypath (`'foo.bar.baz[0]'`) into keys (`['foo','bar','baz',0]`)
-			keys = splitKeypath( keypath );
-
-			// normalise keypath (without calling `normalise()`, since
-			// half the work is already done)
-			keypath = keys.join( '.' );
+			// Split normalised keypath (`'foo.bar.baz.0'`) into keys (`['foo','bar','baz',0]`)
+			keys = keypath.split( '.' );
 
 			obj = this._data;
 			while ( keys.length > 1 ) {
@@ -143,45 +158,56 @@ var Statesman = (function () {
 
 			// If `silent` is set to `false`, and either `force` is true or the new value
 			// is different to the old value, notify observers
-			if ( !options.silent && ( options.force || !isEqual( previous, value ) ) ) {
-				this._notifyObservers( keypath, value, options.force );
+			if ( !options.silent ) {
+				this._notifyObservers( keypath, options.force );
 			}
 
 			return this;
 		},
 
 		get: function ( keypath ) {
-			var keys, result, computed;
+			var keys, lastKey, parentKeypath, parentValue, normalised, result, computed, value;
 
 			if ( !keypath ) {
 				return this._data;
 			}
 
-			// if we have a computed value with this keypath, get it, unless we specifically
-			// want the cached value
-			if ( !this._referToCache ) {
-				computed = this._computed[ keypath ];
-				if ( computed && !computed.cache && !computed.override ) {
-					computed.setter(); // call setter, update data silently
+			normalised = normalise( keypath );
+
+			// TODO update all downstream computed values, not just direct hits
+
+			// if this is a non-cached computed value, compute it, unless we
+			// specifically want the cached value
+			if ( computed = this._computed[ normalised ] ) {
+				if ( !this._referToCache && !computed.cache && !computed.override ) {
+					this._cache[ normalised ] = computed.getter();
 				}
 			}
 
-			keys = splitKeypath( keypath );
-
-			result = this._data;
-			while ( keys.length ) {
-				try {
-					result = result[ keys.shift() ];
-				} catch ( err ) {
-					return undefined;
-				}
-				
-				if ( result === undefined ) {
-					return undefined;
-				}
+			// cache hit?
+			if ( this._cache.hasOwnProperty( normalised ) ) {
+				return this._cache[ normalised ];
 			}
 
-			return result;
+			keys = normalised.split( '.' );
+			lastKey = keys.pop();
+
+			parentKeypath = keys.join( '.' );
+			parentValue = this.get( parentKeypath );
+
+			if ( typeof parentValue === 'object' && parentValue.hasOwnProperty( lastKey ) ) {
+				value = parentValue[ lastKey ];
+				this._cache[ normalised ] = value;
+
+				if ( !this._cacheMap[ parentKeypath ] ) {
+					this._cacheMap[ parentKeypath ] = [];
+				}
+				this._cacheMap[ parentKeypath ].push( normalised );
+			} else {
+				value = undefined;
+			}
+
+			return value;
 		},
 
 		observe: function ( keypath, callback, options ) {
@@ -231,7 +257,11 @@ var Statesman = (function () {
 			observe = function ( keypath ) {
 				var observers, observer;
 
-				observers = self._observers[ keypath ] = ( self._observers[ keypath ] || [] );
+				if ( !self._observers[ keypath ] ) {
+					self._observers[ keypath ] = [];
+				}
+
+				observers = self._observers[ keypath ];
 
 				observer = {
 					observedKeypath: keypath,
@@ -340,6 +370,8 @@ var Statesman = (function () {
 				return computed;
 			}
 
+			keypath = normalise( keypath );
+
 			// If a computed value with this keypath already exists, remove it
 			if ( this._computed[ keypath ] ) {
 				this.removeComputedValue( keypath );
@@ -394,9 +426,13 @@ var Statesman = (function () {
 			// Create setter function. This sets the `id` keypath to the value
 			// returned from `getter`.
 			setter = function () {
+				var value;
+
 				computed.cache = true; // Prevent infinite loops by temporarily caching this value
 				self._computing = true;
-				self.set( keypath, getter() );
+				value = getter();
+				self.set( keypath, value );
+				self._computing = false;
 				computed.cache = cache; // Return to normal behaviour
 			};
 
@@ -443,9 +479,29 @@ var Statesman = (function () {
 			return this;
 		},
 
-		// Internal publish method
-		_notifyObservers: function ( keypath, value, force ) {
-			var self = this, observers = this._observers[ keypath ] || [], i, observer, actualValue, previousValue, notifyObserversOf;
+		// Internal methods
+		_clearCache: function ( keypath ) {
+			var children = this._cacheMap[ keypath ];
+
+			delete this._cache[ keypath ];
+
+			if ( !children ) {
+				return;
+			}
+
+			while ( children.length ) {
+				this._clearCache( children.pop() );
+			}
+		},
+
+		_notifyObservers: function ( keypath, force ) {
+			var self = this,
+				observers = this._observers[ keypath ] || [],
+				i,
+				observer,
+				newValue,
+				previousValue,
+				notifyObserversOf;
 
 			// Notify observers of this keypath, and any downstream keypaths
 			for ( i=0; i<observers.length; i+=1 ) {
@@ -453,29 +509,25 @@ var Statesman = (function () {
 
 				previousValue = observer.group.__previousValue;
 				
-				if ( keypath !== observer.originalKeypath ) {
-					actualValue = self.get( observer.originalKeypath );
-				} else {
-					actualValue = value;
-				}
+				newValue = self.get( observer.originalKeypath );
 
-				observer.group.__previousValue = actualValue;
+				observer.group.__previousValue = newValue;
 				
 				// If this value hasn't changed, skip the callback, unless `force === true`
-				if ( !force && isEqual( actualValue, previousValue ) ) {
+				if ( !force && isEqual( newValue, previousValue ) ) {
 					continue;
 				}
 
 				// If we are queueing callbacks, add this to the queue, otherwise fire immediately
 				if ( this._queueing ) {
-					this._addToQueue( observer.callback, actualValue, previousValue, observer.context || this );
+					this._addToQueue( observer.callback, newValue, previousValue, observer.context || this );
 				} else {
-					observer.callback.call( observer.context || this, actualValue, previousValue );
+					observer.callback.call( observer.context || this, newValue, previousValue );
 				}
 			}
 
 			notifyObserversOf = function ( keypath ) {
-				var observers = self._observers[ keypath ], i;
+				var value, observers = self._observers[ keypath ], i;
 
 				if ( !observers ) {
 					return;
@@ -484,6 +536,8 @@ var Statesman = (function () {
 				i = observers.length;
 				while ( i-- ) {
 					observer = observers[i];
+					// We only want to notify direct observers of the upstream
+					// keypath
 					if ( observer.observedKeypath === observer.originalKeypath ) {
 						value = self.get( keypath );
 
