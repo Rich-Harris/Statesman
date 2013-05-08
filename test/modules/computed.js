@@ -537,6 +537,32 @@ modules[ modules.length ] = {
 
 				equal( after - before, 1 );
 			}
+		},
+
+		{
+			title: 'Computed values can be created using declarative syntax',
+			test: function () {
+				var model = new Statesman({
+					foo: [ 1, 2, 3, 4 ]
+				});
+
+				model.compute( 'sum', '${ foo }.reduce( function ( prev, curr ) { return prev + curr });' );
+
+				equal( model.get( 'sum' ), 10 );
+			}
+		},
+
+		{
+			title: 'Computed values can be created using declarative syntax, using Statesman.utils',
+			test: function () {
+				var model = new Statesman({
+					foo: [ 1, 2, 3, 4 ]
+				});
+
+				model.compute( 'sum', 'utils.total( ${ foo } )' );
+
+				equal( model.get( 'sum' ), 10 );
+			}
 		}
 	]
 };
