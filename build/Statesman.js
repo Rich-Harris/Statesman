@@ -23,6 +23,8 @@ var Statesman = (function () {
 	normalise,
 	splitKeypath,
 	isEqual,
+	varPattern,
+	compile,
 
 	// Cached regexes
 	integerPattern = /^\s*[0-9]+\s*$/;
@@ -351,7 +353,7 @@ var Statesman = (function () {
 		},
 
 		compute: function ( keypath, options ) {
-			var self = this, i, getter, setter, triggers, fn, context, cache, readonly, value, observerGroups, computed;
+			var self = this, i, getter, setter, triggers, fn, context, cache, readonly, value, observerGroups, computed, compiled;
 
 			// Allow multiple values to be set in one go
 			if ( typeof keypath === 'object' ) {
@@ -377,15 +379,45 @@ var Statesman = (function () {
 				this.removeComputedValue( keypath );
 			}
 
-			fn = options.fn;
-			triggers = options.triggers || options.trigger;
-			context = options.context || this;
-			
-			// Ensure triggers is an array
-			if ( !triggers ) {
-				triggers = [];
-			} else if ( typeof triggers === 'string' ) {
-				triggers = [ triggers ];
+			if ( typeof options === 'string' ) {
+				compiled = compile( options );
+
+				// ...
+				fn = compiled.fn;
+				triggers = compiled.triggers;
+				context = this;
+
+				// TODO use Function.prototype.bind where supported?
+				getter = function () {
+					console.log( 'using compiled function' );
+					return fn.call( context, Statesman.utils );
+				};
+			}
+			else {
+				fn = options.fn;
+				triggers = options.triggers || options.trigger;
+				context = options.context || this;
+				
+				// Ensure triggers is an array
+				if ( !triggers ) {
+					triggers = [];
+				} else if ( typeof triggers === 'string' ) {
+					triggers = [ triggers ];
+				}
+
+				// Create getter function. This is a wrapper for `fn`, which passes
+				// it the current values of any triggers that have been defined
+				getter = function () {
+					var i, args = [];
+
+					i = triggers.length;
+					while ( i-- ) {
+						args[i] = self.get( triggers[i] );
+					}
+
+					value = options.fn.apply( context, args );
+					return value;
+				};
 			}
 
 			// Throw an error if `keypath` is in `triggers`
@@ -409,19 +441,7 @@ var Statesman = (function () {
 			observerGroups = [];
 
 			
-			// Create getter function. This is a wrapper for `fn`, which passes
-			// it the current values of any triggers that have been defined
-			getter = function () {
-				var i, args = [];
-
-				i = triggers.length;
-				while ( i-- ) {
-					args[i] = self.get( triggers[i] );
-				}
-
-				value = options.fn.apply( context, args );
-				return value;
-			};
+			
 
 			// Create setter function. This sets the `id` keypath to the value
 			// returned from `getter`.
@@ -652,6 +672,34 @@ var Statesman = (function () {
 
 		// we're left with a primitive
 		return a === b;
+	};
+
+	varPattern = /\$\{\s*([a-zA-Z0-9_$\[\]\.]+)\s*\}/g;
+
+	compile = function ( str ) {
+		var compiled, triggers, expanded;
+
+		compiled = {};
+		triggers = [];
+
+		expanded = str.replace( varPattern, function ( match, keypath ) {
+			triggers[ triggers.length ] = keypath;
+
+			return 'this.get("' + keypath + '")';
+		});
+
+		compiled.triggers = triggers;
+		compiled.fn = new Function( 'utils', 'return ' + expanded );
+
+		return compiled;
+	};
+
+	Statesman.utils = {
+		total: function ( arr ) {
+			return arr.reduce( function ( prev, curr ) {
+				return prev + curr;
+			});
+		}
 	};
 
 	return Statesman;
