@@ -338,6 +338,7 @@ var Statesman = (function () {
 			return this;
 		},
 
+		// TODO refactor this!
 		compute: function ( keypath, options ) {
 			var self = this, i, getter, setter, triggers, fn, context, cache, readonly, value, observerGroups, computed, compiled;
 
@@ -358,6 +359,10 @@ var Statesman = (function () {
 				return computed;
 			}
 
+			if ( !options ) {
+				throw new Error( 'Bad arguments to compute()' );
+			}
+
 			keypath = normalise( keypath );
 
 			// If a computed value with this keypath already exists, remove it
@@ -365,25 +370,29 @@ var Statesman = (function () {
 				this.removeComputedValue( keypath );
 			}
 
+			// Were we just given a string? Compile it
 			if ( typeof options === 'string' ) {
-				compiled = compile( options );
+				compiled = Statesman.compile( options, this );
 
-				// ...
-				fn = compiled.fn;
+				getter = compiled.getter;
 				triggers = compiled.triggers;
-				context = this;
-
-				// TODO use Function.prototype.bind where supported?
-				getter = function () {
-					console.log( 'using compiled function' );
-					return fn.call( context, Statesman.utils );
-				};
 			}
+			
+			// Were we given a string among other options?
+			else if ( typeof options.fn === 'string' ) {
+				// This could have come from a subset, in which case we need to pass along the keypath prefix
+				compiled = Statesman.compile( options.fn, options.context || this, options.prefix );
+				
+				getter = compiled.getter;
+				triggers = compiled.triggers;
+			}
+
+			// Were we given a function?
 			else {
 				fn = options.fn;
 				triggers = options.triggers || options.trigger;
 				context = options.context || this;
-				
+
 				// Ensure triggers is an array
 				if ( !triggers ) {
 					triggers = [];
@@ -401,7 +410,7 @@ var Statesman = (function () {
 						args[i] = self.get( triggers[i] );
 					}
 
-					value = options.fn.apply( context, args );
+					value = fn.apply( context, args );
 					return value;
 				};
 			}
@@ -460,7 +469,7 @@ var Statesman = (function () {
 			// if there are no triggers, `cache` must be false, otherwise
 			// the value will never change
 			if ( !i && cache ) {
-				throw 'Cached computed values must have at least one trigger';
+				throw new Error( 'Cached computed values must have at least one trigger' );
 			}
 
 			while ( i-- ) {
@@ -662,22 +671,35 @@ var Statesman = (function () {
 
 	varPattern = /\$\{\s*([a-zA-Z0-9_$\[\]\.]+)\s*\}/g;
 
-	compile = function ( str ) {
-		var compiled, triggers, expanded;
+	Statesman.compile = function ( str, context, prefix ) {
+		var compiled, triggers, expanded, fn, getter;
 
-		compiled = {};
+		prefix = prefix || '';
 		triggers = [];
 
 		expanded = str.replace( varPattern, function ( match, keypath ) {
-			triggers[ triggers.length ] = keypath;
+			// make a note of which triggers are referenced, but de-dupe first
+			if ( triggers.indexOf( keypath ) === -1 ) {
+				triggers[ triggers.length ] = prefix + keypath;
+			}
 
-			return 'this.get("' + keypath + '")';
+			return 'm.get("' + keypath + '")';
 		});
 
-		compiled.triggers = triggers;
-		compiled.fn = new Function( 'utils', 'return ' + expanded );
+		fn = new Function( 'utils', 'var m = this; return ' + expanded );
 
-		return compiled;
+		if ( fn.bind ) {
+			getter = fn.bind( context, Statesman.utils );
+		} else {
+			getter = function () {
+				return fn.call( context, Statesman.utils );
+			};
+		}
+
+		return {
+			getter: getter,
+			triggers: triggers
+		};
 	};
 
 	Statesman.utils = {

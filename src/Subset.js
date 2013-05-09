@@ -130,7 +130,15 @@
 			options.context = options.context || this;
 
 			processOptions = function ( options ) {
-				var triggers, i;
+				var triggers, i, compiled;
+
+				if ( typeof options === 'string' ) {
+					return {
+						fn: options,
+						context: self,
+						prefix: path
+					};
+				}
 
 				triggers = options.triggers || options.trigger;
 
@@ -156,6 +164,7 @@
 				return options;
 			};
 
+			// Multiple computed values
 			if ( typeof keypath === 'object' ) {
 				map = {};
 				for ( k in keypath ) {
@@ -165,6 +174,7 @@
 				return this._root.compute( map );
 			}
 
+			// Single computed value
 			return this._root.compute( this._pathDot + keypath, processOptions( options ) );
 		},
 
