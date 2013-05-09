@@ -82,6 +82,38 @@ modules[ modules.length ] = {
 		},
 
 		{
+			title: 'Computed values only notify observers once even if multiple triggers change simultaneously',
+			test: function () {
+				var triggered = 0, finalValue, model = new Statesman({
+					foo: 2,
+					bar: 4
+				});
+
+				model.compute( 'baz', {
+					triggers: [ 'foo', 'bar' ],
+					fn: function ( foo, bar ) {
+						return foo + bar;
+					}
+				});
+
+				model.observe( 'baz', function ( baz ) {
+					triggered += 1;
+					finalValue = baz;
+				});
+
+				equal( triggered, 1 ); // init
+
+				model.set({
+					foo: 10,
+					bar: 20
+				});
+
+				equal( finalValue, 30 );
+				equal( triggered, 2 );
+			}
+		},
+
+		{
 			title: 'Computed values can be observed before they are defined, or after',
 			test: function () {
 				var model, sumResult, productResult;
@@ -562,6 +594,83 @@ modules[ modules.length ] = {
 				model.compute( 'sum', 'utils.total( ${ foo } )' );
 
 				equal( model.get( 'sum' ), 10 );
+			}
+		},
+
+		{
+			title: 'Compiled computed values trigger notifications when their values change',
+			test: function () {
+				var finalValue, model = new Statesman({
+					foo: 2
+				});
+
+				model.compute( 'double', '2 * ${foo}' );
+
+				equal( model.get( 'double' ), 4 );
+
+				model.observe( 'double', function ( newValue, oldValue ) {
+					finalValue = newValue;
+				});
+
+				model.set( 'foo', 4 );
+
+				equal( finalValue, 8 );
+			}
+		},
+
+		{
+			title: 'Compiled computed values don\'t trigger notifications when their triggers change but they don\'t',
+			test: function () {
+				var triggered = 0, model = new Statesman({
+					foo: 2,
+					bar: 4
+				});
+
+				model.compute( 'baz', '${foo} + ${bar}' );
+
+				equal( model.get( 'baz' ), 6 );
+
+				model.observe( 'baz', function ( newValue, oldValue ) {
+					triggered += 1;
+				});
+
+				equal( triggered, 1 ); // init
+
+				model.set({
+					foo: 3,
+					bar: 3
+				});
+
+				equal( triggered, 1 );
+			}
+		},
+
+		{
+			title: 'Compiled computed values only notify observers once even if multiple triggers change simultaneously',
+			test: function () {
+				var triggered = 0, finalValue, model = new Statesman({
+					foo: 2,
+					bar: 4
+				});
+
+				model.compute( 'baz', '${foo} + ${bar}' );
+
+				equal( model.get( 'baz' ), 6 );
+
+				model.observe( 'baz', function ( baz ) {
+					triggered += 1;
+					finalValue = baz;
+				});
+
+				equal( triggered, 1 ); // init
+
+				model.set({
+					foo: 10,
+					bar: 20
+				});
+
+				equal( finalValue, 30 );
+				equal( triggered, 2 );
 			}
 		}
 	]

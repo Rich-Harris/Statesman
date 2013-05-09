@@ -268,6 +268,37 @@ modules[ modules.length ] = {
 		},
 
 		{
+			title: 'Subset proxies state.compute with compiled computed values',
+			test: function () {
+				var model, subset, finalValue;
+
+				model = new Statesman({
+					sub: {
+						foo: 2,
+						bar: 4
+					}
+				});
+
+				subset = model.subset( 'sub' );
+				subset.compute( 'baz', '${foo} + ${bar}' );
+
+				equal( subset.get( 'baz' ), 6 );
+
+				subset.observe( 'baz', function ( baz ) {
+					finalValue = baz;
+				});
+
+				subset.set({
+					foo: 10,
+					bar: 20
+				});
+
+				equal( subset.get( 'baz' ), 30 );
+				equal( finalValue, 30 );
+			}
+		},
+
+		{
 			title: 'Subset proxies state.removeComputedValue',
 			test: function () {
 				var state, subset;
