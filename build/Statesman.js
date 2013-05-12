@@ -12,11 +12,147 @@
 
 'use strict';
 
-var Statesman = (function () {
+var _internal = (function () {
 
 	'use strict';
 
-	var Statesman, Subset,
+	return {
+
+	};
+
+}());
+(function ( _internal ) {
+
+	'use strict';
+
+	_internal.on = function ( eventName, callback ) {
+		var self = this, listeners, n, list;
+
+		if ( typeof eventName === 'object' ) {
+			list = [];
+			for ( n in eventName ) {
+				if ( eventName.hasOwnProperty( n ) ) {
+					list[ list.length ] = this.on( n, eventName[n] );
+				}
+			}
+
+			return {
+				cancel: function () {
+					while ( list.length ) {
+						list.pop().cancel();
+					}
+				}
+			};
+		}
+
+		if ( !this.subs[ eventName ] ) {
+			this.subs[ eventName ] = [];
+		}
+
+		listeners = this.subs[ eventName ];
+		listeners[ listeners.length ] = callback;
+
+		return {
+			cancel: function () {
+				self.off( eventName, callback );
+			}
+		};
+	};
+
+	_internal.once = function ( eventName, callback ) {
+		var self = this, listeners, n, list, suicidalCallback;
+
+		if ( typeof eventName === 'object' ) {
+			list = [];
+			for ( n in eventName ) {
+				if ( eventName.hasOwnProperty( n ) ) {
+					list[ list.length ] = this.once( n, eventName[n] );
+				}
+			}
+
+			return {
+				cancel: function () {
+					while ( list.length ) {
+						list.pop().cancel();
+					}
+				}
+			};
+		}
+
+		if ( !this.subs[ eventName ] ) {
+			this.subs[ eventName ] = [];
+		}
+
+		listeners = this.subs[ eventName ];
+
+		suicidalCallback = function () {
+			callback.apply( self, arguments );
+			self.off( eventName, suicidalCallback );
+		};
+
+		listeners[ listeners.length ] = suicidalCallback;
+
+		return {
+			cancel: function () {
+				self.off( eventName, suicidalCallback );
+			}
+		};
+	};
+
+	_internal.off = function ( eventName, callback ) {
+		var subscribers, index;
+
+		if ( !eventName ) {
+			this.subs = {};
+			return this;
+		}
+
+		if ( !callback ) {
+			delete this.subs[ eventName ];
+			return this;
+		}
+
+		subscribers = this.subs[ eventName ];
+		if ( subscribers ) {
+			index = subscribers.indexOf( callback );
+
+			if ( index !== -1 ) {
+				subscribers.splice( index, 1 );
+			}
+
+			if ( !subscribers.length ) {
+				delete this.subs[ eventName ];
+			}
+		}
+
+		return this;
+	};
+
+	_internal.fire = function ( eventName ) {
+		var subscribers, args, len, i;
+
+		subscribers = this.subs[ eventName ];
+
+		if ( !subscribers ) {
+			return this;
+		}
+
+		len = subscribers.length;
+		args = Array.prototype.slice.call( arguments, 1 );
+
+		for ( i=0; i<len; i+=1 ) {
+			subscribers[i].apply( this, args );
+		}
+	};
+
+}( _internal ));
+var Statesman;
+
+(function ( _internal ) {
+
+	'use strict';
+
+	var Subset,
 
 	// Helper functions
 	normalisedKeypathCache,
@@ -38,6 +174,9 @@ var Statesman = (function () {
 		this._subsets = {};
 		this._queue = [];
 
+		// events
+		this.subs = {};
+
 		this._cache = {};
 		this._cacheMap = {};
 	};
@@ -47,6 +186,8 @@ var Statesman = (function () {
 		
 		reset: function ( data, options ) {
 			this._data = {};
+			this.fire( 'reset' );
+
 			this.set( data, { silent: true });
 
 			this._notifyAllObservers( options ? options.force : false );
@@ -79,11 +220,10 @@ var Statesman = (function () {
 			}
 
 			// okay, now we're definitely dealing with a single value
-
+			this.fire( 'set', keypath, value, options );
+			this.fire( 'set:' + keypath, value, options );
 
 			keypath = normalise( keypath );
-
-
 
 			computed = this._computed[ keypath ];
 
@@ -508,6 +648,13 @@ var Statesman = (function () {
 			return this;
 		},
 
+
+		// Events
+		on: _internal.on,
+		off: _internal.off,
+		once: _internal.once,
+		fire: _internal.fire,
+
 		// Internal methods
 		_clearCache: function ( keypath ) {
 			var children = this._cacheMap[ keypath ];
@@ -726,8 +873,8 @@ var Statesman = (function () {
 
 	return Statesman;
 
-}());
-(function ( Statesman ) {
+}( _internal ));
+(function ( Statesman, _internal ) {
 
 	'use strict';
 
@@ -747,9 +894,31 @@ var Statesman = (function () {
 
 
 	Subset = function( path, state ) {
+		var self = this, keypathPattern, pathDotLength;
+
 		this._path = path;
 		this._pathDot = path + '.';
 		this._root = state;
+
+		// events stuff
+		this.subs = {};
+		keypathPattern = new RegExp( '^' + this._pathDot.replace( '.', '\\.' ) );
+		pathDotLength = this._pathDot.length;
+
+		this._root.on( 'set', function ( keypath, value, options ) {
+			var localKeypath;
+
+			if ( keypath === this._path ) {
+				self.fire( 'reset' );
+				return;
+			}
+
+			if ( keypathPattern.test( keypath ) ) {
+				localKeypath = keypath.substring( pathDotLength );
+				self.fire( 'set', localKeypath, value, options );
+				self.fire( 'set:' + localKeypath, value, options );
+			}
+		});
 	};
 
 	Subset.prototype = {
@@ -914,10 +1083,15 @@ var Statesman = (function () {
 
 		subset: function ( keypath ) {
 			return this._root.subset( this._pathDot + keypath );
-		}
+		},
+
+		on: _internal.on,
+		off: _internal.off,
+		once: _internal.once,
+		fire: _internal.fire
 	};
 
-}( Statesman ));
+}( Statesman, _internal ));
 
 // export
 if ( typeof module !== "undefined" && module.exports ) module.exports = Statesman // Common JS

@@ -1,8 +1,10 @@
-var Statesman = (function () {
+var Statesman;
+
+(function ( _internal ) {
 
 	'use strict';
 
-	var Statesman, Subset,
+	var Subset,
 
 	// Helper functions
 	normalisedKeypathCache,
@@ -24,6 +26,9 @@ var Statesman = (function () {
 		this._subsets = {};
 		this._queue = [];
 
+		// events
+		this.subs = {};
+
 		this._cache = {};
 		this._cacheMap = {};
 	};
@@ -33,6 +38,8 @@ var Statesman = (function () {
 		
 		reset: function ( data, options ) {
 			this._data = {};
+			this.fire( 'reset' );
+
 			this.set( data, { silent: true });
 
 			this._notifyAllObservers( options ? options.force : false );
@@ -65,11 +72,10 @@ var Statesman = (function () {
 			}
 
 			// okay, now we're definitely dealing with a single value
-
+			this.fire( 'set', keypath, value, options );
+			this.fire( 'set:' + keypath, value, options );
 
 			keypath = normalise( keypath );
-
-
 
 			computed = this._computed[ keypath ];
 
@@ -494,6 +500,13 @@ var Statesman = (function () {
 			return this;
 		},
 
+
+		// Events
+		on: _internal.on,
+		off: _internal.off,
+		once: _internal.once,
+		fire: _internal.fire,
+
 		// Internal methods
 		_clearCache: function ( keypath ) {
 			var children = this._cacheMap[ keypath ];
@@ -712,4 +725,4 @@ var Statesman = (function () {
 
 	return Statesman;
 
-}());
+}( _internal ));

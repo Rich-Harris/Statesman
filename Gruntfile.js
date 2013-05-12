@@ -28,7 +28,7 @@ module.exports = function(grunt) {
 
 		watch: {
 			js: {
-				files: [ 'src/Statesman.js', 'src/Subset.js' ],
+				files: [ 'src/**/*.js' ],
 				tasks: 'concat',
 				interrupt: true
 			}
@@ -49,7 +49,7 @@ module.exports = function(grunt) {
 				footer: '<%= meta.wrapper.end %>'
 			},
 			build: {
-				src: [ 'src/Statesman.js', 'src/Subset.js' ],
+				src: [ 'src/_internal.js', 'src/events.js', 'src/Statesman.js', 'src/Subset.js' ],
 				dest: 'build/Statesman.js'
 			}
 		},

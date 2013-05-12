@@ -1,4 +1,4 @@
-(function ( Statesman ) {
+(function ( Statesman, _internal ) {
 
 	'use strict';
 
@@ -18,9 +18,31 @@
 
 
 	Subset = function( path, state ) {
+		var self = this, keypathPattern, pathDotLength;
+
 		this._path = path;
 		this._pathDot = path + '.';
 		this._root = state;
+
+		// events stuff
+		this.subs = {};
+		keypathPattern = new RegExp( '^' + this._pathDot.replace( '.', '\\.' ) );
+		pathDotLength = this._pathDot.length;
+
+		this._root.on( 'set', function ( keypath, value, options ) {
+			var localKeypath;
+
+			if ( keypath === this._path ) {
+				self.fire( 'reset' );
+				return;
+			}
+
+			if ( keypathPattern.test( keypath ) ) {
+				localKeypath = keypath.substring( pathDotLength );
+				self.fire( 'set', localKeypath, value, options );
+				self.fire( 'set:' + localKeypath, value, options );
+			}
+		});
 	};
 
 	Subset.prototype = {
@@ -185,7 +207,12 @@
 
 		subset: function ( keypath ) {
 			return this._root.subset( this._pathDot + keypath );
-		}
+		},
+
+		on: _internal.on,
+		off: _internal.off,
+		once: _internal.once,
+		fire: _internal.fire
 	};
 
-}( Statesman ));
+}( Statesman, _internal ));
