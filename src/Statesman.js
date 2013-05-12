@@ -699,7 +699,7 @@ var Statesman;
 			return 'm.get("' + keypath + '")';
 		});
 
-		fn = new Function( 'utils', 'var m = this; return ' + expanded );
+		fn = new Function( 'utils', 'var m=this;try{return ' + expanded + '}catch(e){return undefined}' );
 
 		if ( fn.bind ) {
 			getter = fn.bind( context, Statesman.utils );
