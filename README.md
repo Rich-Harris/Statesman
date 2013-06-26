@@ -111,12 +111,4 @@ License
 MIT: https://github.com/Rich-Harris/Statesman/blob/master/LICENSE-MIT
 
 
-Changelog
----------
-
-* 0.1.0 - first release
-* 0.1.1 - bug fixes, observers are now notified of downstream changes
-* 0.1.2 - computed values
-* 0.1.3 - tidied up API, removed docco docs in favour of wiki
-* 0.1.4 - can observe state model (or subset) root by omitting keypath
-* 0.1.5 - subset observers' default context is the subset, tweaked API
+Changelog [here](CHANGELOG.md).
