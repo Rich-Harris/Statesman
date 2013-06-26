@@ -36,7 +36,7 @@ modules[ modules.length ] = {
 
 				state.set( 'foo.bar', 'baz' );
 
-				deepEqual( state._data, { foo: { bar: 'baz' } } );
+				deepEqual( state.data, { foo: { bar: 'baz' } } );
 			}
 		},
 
@@ -46,7 +46,7 @@ modules[ modules.length ] = {
 				var state = new Statesman();
 
 				state.set( 'foo.bar[0]', 'baz' );
-				deepEqual( state._data, { foo: { bar: [ 'baz' ] } } );
+				deepEqual( state.data, { foo: { bar: [ 'baz' ] } } );
 
 				equal( state.get( 'foo.bar[0]' ), 'baz' );
 				equal( state.get( 'foo.bar.0' ), 'baz' );

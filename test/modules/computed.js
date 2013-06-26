@@ -9,8 +9,8 @@ modules[ modules.length ] = {
 				});
 
 				model.compute( 'sum', {
-					triggers: 'foo',
-					fn: function ( foo ) {
+					dependsOn: 'foo',
+					get: function ( foo ) {
 						var sum;
 
 						sum = foo.reduce( function ( prev, curr ) {
@@ -33,11 +33,11 @@ modules[ modules.length ] = {
 				});
 
 				model.compute( 'sum', {
-					triggers: 'foo',
-					fn: function ( foo ) {
+					dependsOn: 'foo',
+					get: function ( foo ) {
 						var sum;
 
-							sum = foo.reduce( function ( prev, curr ) {
+						sum = foo.reduce( function ( prev, curr ) {
 							return prev + curr;
 						});
 
@@ -52,15 +52,15 @@ modules[ modules.length ] = {
 		},
 
 		{
-			title: 'Computed values notify observers when their triggers change',
+			title: 'Computed values notify observers when their dependencies change',
 			test: function () {
 				var result, model = new Statesman({
 					foo: [ 1, 2, 3, 4 ]
 				});
 
 				model.compute( 'sum', {
-					triggers: 'foo',
-					fn: function ( foo ) {
+					dependsOn: 'foo',
+					get: function ( foo ) {
 						var sum;
 
 						sum = foo.reduce( function ( prev, curr ) {
@@ -82,7 +82,7 @@ modules[ modules.length ] = {
 		},
 
 		{
-			title: 'Computed values only notify observers once even if multiple triggers change simultaneously',
+			title: 'Computed values only notify observers once even if multiple dependencies change simultaneously',
 			test: function () {
 				var triggered = 0, finalValue, model = new Statesman({
 					foo: 2,
@@ -90,8 +90,8 @@ modules[ modules.length ] = {
 				});
 
 				model.compute( 'baz', {
-					triggers: [ 'foo', 'bar' ],
-					fn: function ( foo, bar ) {
+					dependsOn: [ 'foo', 'bar' ],
+					get: function ( foo, bar ) {
 						return foo + bar;
 					}
 				});
@@ -129,8 +129,8 @@ modules[ modules.length ] = {
 
 				// create sum computed value
 				model.compute( 'sum', {
-					triggers: 'foo',
-					fn: function ( foo ) {
+					dependsOn: 'foo',
+					get: function ( foo ) {
 						var sum;
 
 						sum = foo.reduce( function ( prev, curr ) {
@@ -143,8 +143,8 @@ modules[ modules.length ] = {
 
 				// create product computed value
 				model.compute( 'product', {
-					triggers: 'foo',
-					fn: function ( foo ) {
+					dependsOn: 'foo',
+					get: function ( foo ) {
 						var product;
 
 						product = foo.reduce( function ( prev, curr ) {
@@ -171,12 +171,12 @@ modules[ modules.length ] = {
 		},
 
 		{
-			title: 'Computed values can be created without triggers',
+			title: 'Computed values can be created without dependencies',
 			test: function () {
 				var model = new Statesman();
 
 				model.compute( 'foo', {
-					fn: function () {
+					get: function () {
 						return 'bar';
 					}
 				});
@@ -191,7 +191,7 @@ modules[ modules.length ] = {
 				var triggered = 0, model = new Statesman();
 
 				model.compute( 'random', {
-					fn: function () {
+					get: function () {
 						triggered += 1;
 						return Math.random();
 					}
@@ -213,8 +213,8 @@ modules[ modules.length ] = {
 				var triggered = 0, model = new Statesman();
 
 				model.compute( 'random', {
-					triggers: 'foo',
-					fn: function () {
+					dependsOn: 'foo',
+					get: function () {
 						triggered += 1;
 						return Math.random();
 					},
@@ -232,15 +232,15 @@ modules[ modules.length ] = {
 		},
 
 		{
-			title: 'Uncached computed values with triggers are triggered once for each time their triggers are changed',
+			title: 'Uncached computed values with dependencies are triggered once for each time their dependencies are changed',
 			test: function () {
 				var triggered = 0, model = new Statesman({
 					foo: 'bar'
 				});
 
 				model.compute( 'FOO', {
-					triggers: 'foo',
-					fn: function ( foo ) {
+					dependsOn: 'foo',
+					get: function ( foo ) {
 						triggered += 1;
 						return foo.toUpperCase();
 					}
@@ -260,15 +260,15 @@ modules[ modules.length ] = {
 		},
 
 		{
-			title: 'Cached computed values with triggers are triggered once for each time their triggers are changed',
+			title: 'Cached computed values with dependencies are triggered once for each time their dependencies are changed',
 			test: function () {
 				var triggered = 0, model = new Statesman({
 					foo: 'bar'
 				});
 
 				model.compute( 'FOO', {
-					triggers: 'foo',
-					fn: function ( foo ) {
+					dependsOn: 'foo',
+					get: function ( foo ) {
 						triggered += 1;
 						return foo.toUpperCase();
 					},
@@ -289,7 +289,7 @@ modules[ modules.length ] = {
 		},
 
 		{
-			title: 'Computed values can have multiple triggers',
+			title: 'Computed values can have multiple dependencies',
 			test: function () {
 				var result, model = new Statesman({
 					firstname: 'Henry',
@@ -297,8 +297,8 @@ modules[ modules.length ] = {
 				});
 
 				model.compute( 'fullname', {
-					triggers: [ 'firstname', 'lastname' ],
-					fn: function ( firstname, lastname ) {
+					dependsOn: [ 'firstname', 'lastname' ],
+					get: function ( firstname, lastname ) {
 						return firstname + ' ' + lastname;
 					}
 				});
@@ -316,7 +316,7 @@ modules[ modules.length ] = {
 		},
 
 		{
-			title: 'Computed values that are downstream of their triggers do not result in infinite loops',
+			title: 'Computed values that are downstream of their dependencies do not result in infinite loops',
 			test: function () {
 				var triggered = 0, model = new Statesman({
 					name: {
@@ -330,8 +330,8 @@ modules[ modules.length ] = {
 				});
 
 				model.compute( 'name.full', {
-					triggers: 'name',
-					fn: function ( name ) {
+					dependsOn: 'name',
+					get: function ( name ) {
 						return name.first + ' ' + name.last;
 					}
 				});
@@ -345,8 +345,10 @@ modules[ modules.length ] = {
 			test: function () {
 				var model = new Statesman();
 
+				model.debug = true;
+
 				model.compute( 'foo', {
-					fn: function () {
+					get: function () {
 						return 'bar';
 					}
 				});
@@ -354,7 +356,7 @@ modules[ modules.length ] = {
 				try {
 					model.set( 'foo', 'baz' );
 				} catch ( err ) {
-					equal( err, 'The computed value "foo" has readonly set true and cannot be changed manually' );
+					equal( err.message, 'You cannot overwrite a computed value ("foo"), unless its readonly flag is set true' );
 				}
 			}
 		},
@@ -365,7 +367,7 @@ modules[ modules.length ] = {
 				var model = new Statesman();
 
 				model.compute( 'foo', {
-					fn: function () {
+					get: function () {
 						return 'bar';
 					},
 					readonly: false
@@ -377,13 +379,13 @@ modules[ modules.length ] = {
 		},
 
 		{
-			title: 'Computed values with triggers can have the readonly flag set false, and can therefore be manually set',
+			title: 'Computed values with dependencies can have the readonly flag set false, and can therefore be manually set',
 			test: function () {
 				var model = new Statesman();
 
 				model.compute( 'foo', {
-					triggers: [ 'ben' ],
-					fn: function () {
+					dependsOn: [ 'ben' ],
+					get: function () {
 						return 'bar';
 					},
 					readonly: false
@@ -403,8 +405,8 @@ modules[ modules.length ] = {
 				});
 
 				model.compute( 'lower', {
-					triggers: 'upper',
-					fn: function ( upper ) {
+					dependsOn: 'upper',
+					get: function ( upper ) {
 						triggered += 1;
 						return upper.toLowerCase();
 					},
@@ -412,8 +414,8 @@ modules[ modules.length ] = {
 				});
 
 				model.compute( 'upper', {
-					triggers: 'lower',
-					fn: function ( lower ) {
+					dependsOn: 'lower',
+					get: function ( lower ) {
 						return lower.toUpperCase();
 					},
 					readonly: false
@@ -431,19 +433,19 @@ modules[ modules.length ] = {
 		},
 
 		{
-			title: 'A computed value cannot be its own trigger',
+			title: 'A computed value cannot be its own dependency',
 			test: function () {
 				var model = new Statesman();
 
 				try {
 					model.compute( 'test', {
-						triggers: 'test',
-						fn: function () {
+						dependsOn: 'test',
+						get: function () {
 							// noop
 						}
 					});
 				} catch ( err ) {
-					equal( err, 'A computed value cannot be its own trigger' );
+					equal( err.message, 'A computed value ("test") cannot depend on itself' );
 				}
 			}
 		},
@@ -456,7 +458,7 @@ modules[ modules.length ] = {
 				});
 
 				model.compute( 'foo', {
-					fn: function () {
+					get: function () {
 						return 'baz';
 					}
 				});
@@ -472,10 +474,10 @@ modules[ modules.length ] = {
 
 				computed = model.compute({
 					foo: {
-						fn: function () { return 'bar'; }
+						get: function () { return 'bar'; }
 					},
 					bar: {
-						fn: function () { return 'baz'; }
+						get: function () { return 'baz'; }
 					}
 				});
 
@@ -488,35 +490,7 @@ modules[ modules.length ] = {
 		},
 
 		{
-			title: 'Triggers can be set using "trigger" or "triggers"',
-			test: function () {
-				var model = new Statesman({
-					value: 1
-				});
-
-				model.compute( 'double', {
-					trigger: 'value',
-					fn: function ( value ) {
-						return 2 * value;
-					}
-				});
-
-				model.compute( 'triple', {
-					triggers: 'value',
-					fn: function ( value ) {
-						return 3 * value;
-					}
-				});
-
-				model.set( 'value', 2 );
-
-				equal( model.get( 'double' ), 4 );
-				equal( model.get( 'triple' ), 6 );
-			}
-		},
-
-		{
-			title: 'Computed values can be removed, and their observers will be detached',
+			title: 'Computed values can be removed, and their references will be torn down',
 			test: function () {
 				var model = new Statesman({
 					foo: 'bar',
@@ -524,26 +498,26 @@ modules[ modules.length ] = {
 				});
 
 				model.compute( 'foobar', {
-					triggers: [ 'foo', 'bar' ],
-					fn: function ( foo, bar ) {
+					dependsOn: [ 'foo', 'bar' ],
+					get: function ( foo, bar ) {
 						return foo + bar;
 					}
 				});
 
-				ok( _.isArray( model._observers.foo ) && model._observers.foo.length === 1 );
-				ok( _.isArray( model._observers.bar ) && model._observers.bar.length === 1 );
+				ok( _.isArray( model._refs.foo ) && model._refs.foo.length === 1 );
+				ok( _.isArray( model._refs.bar ) && model._refs.bar.length === 1 );
 				ok( _.isObject( model._computed.foobar ) );
 
 				model.removeComputedValue( 'foobar' );
 
-				ok( _.isUndefined( model._observers.foo ) );
-				ok( _.isUndefined( model._observers.bar ) );
-				ok( _.isUndefined( model._computed.foobar ) );
+				ok( model._refs.foo.length === 0 );
+				ok( model._refs.bar.length === 0 );
+				ok( _.isNull( model._computed.foobar ) );
 			}
 		},
 
 		{
-			title: 'Observers of computed values will only be notified once if multiple triggers are changed simultaneously',
+			title: 'Observers of computed values will only be notified once if multiple dependencies are changed simultaneously',
 			test: function () {
 				var triggered = 0, before, after, model = new Statesman({
 					firstname: 'Gisele',
@@ -551,8 +525,8 @@ modules[ modules.length ] = {
 				});
 
 				model.compute( 'fullname', {
-					triggers: [ 'firstname', 'lastname' ],
-					fn: function ( firstname, lastname ) {
+					dependsOn: [ 'firstname', 'lastname' ],
+					get: function ( firstname, lastname ) {
 						triggered += 1;
 						return firstname + ' ' + lastname;
 					}
@@ -619,7 +593,7 @@ modules[ modules.length ] = {
 		},
 
 		{
-			title: 'Compiled computed values don\'t trigger notifications when their triggers change but they don\'t',
+			title: 'Compiled computed values don\'t trigger notifications when their dependsOn change but they don\'t',
 			test: function () {
 				var triggered = 0, model = new Statesman({
 					foo: 2,
@@ -646,7 +620,7 @@ modules[ modules.length ] = {
 		},
 
 		{
-			title: 'Compiled computed values only notify observers once even if multiple triggers change simultaneously',
+			title: 'Compiled computed values only notify observers once even if multiple dependsOn change simultaneously',
 			test: function () {
 				var triggered = 0, finalValue, model = new Statesman({
 					foo: 2,
@@ -671,6 +645,33 @@ modules[ modules.length ] = {
 
 				equal( finalValue, 30 );
 				equal( triggered, 2 );
+			}
+		},
+
+		{
+			title: 'Multiple computed values that share a trigger are rolled into one `set` event',
+			test: function () {
+				var model, lastChange;
+
+				model = new Statesman({
+					foo: 'bar'
+				});
+
+				model.compute({
+					FOO: '${foo}.toUpperCase()',
+					oof: '${foo}.split("").reverse().join("")'
+				});
+
+				equal( model.get( 'FOO' ), 'BAR' );
+				equal( model.get( 'oof' ), 'rab' );
+
+				model.on( 'change', function ( hash ) {
+					lastChange = hash;
+				});
+
+				model.set( 'foo', 'baz' );
+
+				deepEqual( lastChange, { FOO: 'BAZ', oof: 'zab', foo: 'baz' });
 			}
 		}
 	]

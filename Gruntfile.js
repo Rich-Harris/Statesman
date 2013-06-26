@@ -10,20 +10,9 @@ module.exports = function(grunt) {
 				'* <%= pkg.description %>\n\n' +
 				'* <%= pkg.homepage %>\n' +
 				'* Copyright (c) <%= grunt.template.today("yyyy") %> <%= pkg.author.name %>;' +
-				' Licensed <%= _.pluck(pkg.licenses, "type").join(", ") %> */\n' +
-				'\n' +
+				' MIT Licensed */\n' +
 				'/*jslint eqeq: true, plusplus: true */\n' +
-				'/*global document, HTMLElement */\n' +
-				'\n\n',
-			wrapper: {
-				start: '(function ( global ) {\n\n' +
-						'\'use strict\';\n\n',
-				end: '\n\n// export\n' +
-						'if ( typeof module !== "undefined" && module.exports ) module.exports = Statesman // Common JS\n' +
-						'else if ( typeof define === "function" && define.amd ) define( function () { return Statesman } ) // AMD\n' +
-						'else { global.Statesman = Statesman }\n\n' +
-						'}( this ));'
-			}
+				'\n\n'
 		},
 
 		watch: {
@@ -45,18 +34,25 @@ module.exports = function(grunt) {
 		},
 		concat: {
 			options: {
-				banner: '<%= meta.banner %><%= meta.wrapper.start %>',
-				footer: '<%= meta.wrapper.end %>'
+				banner: '<%= meta.banner %>'
 			},
 			build: {
-				src: [ 'src/_internal.js', 'src/events.js', 'src/Statesman.js', 'src/Subset.js' ],
+				src: [ 'wrapper/begin.js', 'src/**/*.js', 'wrapper/end.js' ],
 				dest: 'build/Statesman.js'
+			},
+			legacy: {
+				src: [ 'wrapper/begin.js', 'legacy.js', 'src/**/*.js', 'wrapper/end.js' ],
+				dest: 'build/Statesman-legacy.js'
 			}
 		},
 		uglify: {
 			build: {
 				src: [ 'build/Statesman.js' ],
 				dest: 'build/Statesman.min.js'
+			},
+			legacy: {
+				src: [ 'build/Statesman-legacy.js' ],
+				dest: 'build/Statesman-legacy.min.js'
 			}
 		},
 		copy: {

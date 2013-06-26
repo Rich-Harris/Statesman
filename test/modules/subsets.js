@@ -193,55 +193,6 @@ modules[ modules.length ] = {
 		},
 
 		{
-			title: 'Subset proxies state.observeOnce',
-			test: function () {
-				var state, subset, finalBar;
-
-				state = new Statesman({
-					foo: {
-						bar: 'baz'
-					}
-				});
-
-				subset = state.subset( 'foo' );
-
-				subset.observeOnce( 'bar', function ( newBar ) {
-					finalBar = newBar;
-				});
-
-				state.set( 'foo.bar', 'ben' );
-				state.set( 'foo.bar', 'somethingElseEntirely' );
-				
-				equal( finalBar, 'ben' );
-			}
-		},
-
-		{
-			title: 'Subset proxies state.unobserve',
-			test: function () {
-				var state, subset, observers, triggered;
-
-				state = new Statesman({
-					foo: {
-						bar: 'baz'
-					}
-				});
-
-				subset = state.subset( 'foo' );
-
-				observers = subset.observe( 'bar', function () {
-					triggered = true;
-				}, { init: false });
-
-				state.unobserve( observers );
-
-				subset.set( 'bar', 'ben' );
-				
-				ok( !triggered );
-			}
-		},
-
-		{
 			title: 'Subset proxies state.compute',
 			test: function () {
 				var state, subset;
@@ -255,8 +206,8 @@ modules[ modules.length ] = {
 				subset = state.subset( 'text' );
 
 				subset.compute( 'upper', {
-					trigger: 'lower',
-					fn: function ( lower ) {
+					dependsOn: 'lower',
+					get: function ( lower ) {
 						return lower.toUpperCase();
 					}
 				});
@@ -278,6 +229,8 @@ modules[ modules.length ] = {
 						bar: 4
 					}
 				});
+
+				window.model = model;
 
 				subset = model.subset( 'sub' );
 				subset.compute( 'baz', '${foo} + ${bar}' );
@@ -312,8 +265,8 @@ modules[ modules.length ] = {
 				subset = state.subset( 'text' );
 
 				subset.compute( 'upper', {
-					trigger: 'lower',
-					fn: function ( lower ) {
+					dependsOn: 'lower',
+					get: function ( lower ) {
 						return lower.toUpperCase();
 					}
 				});

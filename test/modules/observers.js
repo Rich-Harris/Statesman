@@ -2,46 +2,15 @@ modules[ modules.length ] = {
 	name: 'Observers',
 	tests: [
 		{
-			title: '.observe() returns an array of observers',
-			test: function () {
-				var state = new Statesman(), observers;
-
-				observers = state.observe( 'foo', function () {} );
-				ok( _.isArray( observers ) && observers[0] );
-			}
-		},
-
-		{
-			title: 'An observer has: observedKeypath, originalKeypath, callback, group',
-			test: function () {
-				var state, callback, observers, observer;
-
-				state = new Statesman({
-					foo: 'bar'
-				});
-
-				callback = function () {};
-
-				observers = state.observe( 'foo', callback );
-				observer = observers[0];
-
-				equal( observer.observedKeypath, 'foo' );
-				equal( observer.originalKeypath, 'foo' );
-				equal( observer.callback, callback );
-				equal( observer.group, observers );
-			}
-		},
-
-		{
-			title: 'Observing "foo" adds an observer to state._observers.foo',
+			title: 'Observing "foo" adds a dependant to state._observers.foo',
 			test: function () {
 				var state = new Statesman(), callback = function () {}, observer;
 
 				state.observe( 'foo', callback );
-				ok( _.isArray( state._observers.foo ) );
-				ok( _.isObject( state._observers.foo[0] ) );
+				ok( _.isArray( state._deps.foo ) );
+				ok( _.isObject( state._deps.foo[0] ) );
 
-				observer = state._observers.foo[0];
+				observer = state._deps.foo[0];
 
 				equal( callback, observer.callback );
 			}
@@ -78,19 +47,19 @@ modules[ modules.length ] = {
 		{
 			title: 'Observers can be cancelled',
 			test: function () {
-				var state, observers, triggered = 0;
+				var state, observer, triggered = 0;
 
 				state = new Statesman({
 					foo: 'bar'
 				});
 
-				observers = state.observe( 'foo', function () {
+				observer = state.observe( 'foo', function () {
 					triggered += 1;
 				}, { init: false });
 
 				state.set( 'foo', 'baz' );
 
-				state.unobserve( observers );
+				observer.cancel();
 				state.set( 'foo', 'bar' );
 
 				equal( triggered, 1 );
@@ -110,38 +79,6 @@ modules[ modules.length ] = {
 				state.set( 'foo', 'bar' );
 
 				equal( i, 1 );
-			}
-		},
-
-		{
-			title: 'Setting an item with force=true triggers callbacks even if there is no change',
-			test: function () {
-				var state = new Statesman(), i = 0;
-
-				state.observe( 'foo', function () {
-					i += 1;
-				}, { init: false });
-
-				state.set( 'foo', 'bar', { force: true });
-				state.set( 'foo', 'bar', { force: true });
-
-				equal( i, 2 );
-			}
-		},
-
-		{
-			title: 'Silent > force',
-			test: function () {
-				var state = new Statesman(), i = 0;
-
-				state.observe( 'foo', function () {
-					i += 1;
-				}, { init: false });
-
-				state.set( 'foo', 'bar', { silent: true, force: true });
-				state.set( 'foo', 'bar', { silent: true, force: true });
-
-				equal( i, 0 );
 			}
 		},
 
@@ -276,31 +213,6 @@ modules[ modules.length ] = {
 				equal( finalFoo, 'baz' );
 				equal( finalBar, 'foo' );
 				equal( finalBaz, 'bar' );
-			}
-		},
-
-		{
-			title: 'Setting multiple observers returns an array of arrays of observers',
-			test: function () {
-				var observers, state;
-
-				state = new Statesman({
-					foo: 'bar',
-					bar: 'baz'
-				});
-
-				observers = state.observe({
-					foo: function () {
-						// do something
-					},
-					bar: function () {
-						// do something
-					}
-				});
-
-				ok( _.isArray( observers ) );
-				equal( observers.length, 2 );
-				ok( _.isArray( observers[0] ) && _.isArray( observers[1] ) );
 			}
 		},
 

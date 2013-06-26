@@ -69,6 +69,36 @@ try {
 		}
 	};
 }
+// Shims for old browsers
+(function () {
+	
+	if ( !Array.prototype.indexOf ) {
+		Array.prototype.indexOf = function ( needle, i ) {
+			var len;
+
+			if ( i === undefined ) {
+				i = 0;
+			}
+
+			if ( i < 0 ) {
+				i+= this.length;
+			}
+
+			if ( i < 0 ) {
+				i = 0;
+			}
+
+			for ( len = this.length; i<len; i++ ) {
+				if ( i in this && this[i] === needle ) {
+					return i;
+				}
+			}
+
+			return -1;
+		};
+	}
+	
+}());
 (function () {
 
 	var varPattern = /\$\{\s*([a-zA-Z0-9_$\[\]\.]+)\s*\}/g;
