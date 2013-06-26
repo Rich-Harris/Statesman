@@ -15,14 +15,6 @@ var Statesman,
 	utils,
 
 	// helper functions
-	toString,
-	isArray,
-	isEqual,
-	normalise,
-	getObservers,
-	notifyObservers,
-	augment,
-
 	set,
 
 	defineProperty,

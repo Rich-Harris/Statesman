@@ -49,11 +49,11 @@
 		}
 
 		// Notify direct dependants of upstream keypaths...
-		notifyMultipleDependants( this, allUpstreamChanges, true );
+		notifyMultipleObservers( this, allUpstreamChanges, true );
 
 		// ...and dependants of this and downstream keypaths
 		if ( allChanges.length ) {
-			notifyMultipleDependants( this, allChanges );
+			notifyMultipleObservers( this, allChanges );
 		}
 
 		

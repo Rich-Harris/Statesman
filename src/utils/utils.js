@@ -1,8 +1,11 @@
+// Miscellaneous helper functions
+var toString, isArray, isEqual, normalise, augment;
+
 toString = Object.prototype.toString;
 
 isArray = function ( thing ) {
 	return toString.call( thing ) === '[object Array]';
-}
+};
 
 isEqual = function ( a, b ) {
 	// workaround for null, because typeof null = 'object'...
@@ -23,50 +26,6 @@ isEqual = function ( a, b ) {
 
 normalise = function ( keypath ) {
 	return normalisedKeypathCache[ keypath ] || ( normalisedKeypathCache[ keypath ] = keypath.replace( /\[\s*([0-9]+)\s*\]/g, '.$1' ) );
-};
-
-getObservers = function ( model, keypath ) {
-	var observers, upstream, observer, keys, i;
-
-	// direct and downstream observers
-	observers = model._observers[ keypath ];
-
-	// upstream
-	keys = keypath.split( '.' );
-
-	while ( keys.length ) {
-		keys.pop();
-		keypath = keys.join( '.' );
-		upstream = model._observers[ keypath ];
-
-		i = upstream.length;
-		while ( i-- ) {
-			observer = upstream[i];
-
-			// we only want direct observers of the upstream keypath
-			if ( observer.observedKeypath === keypath ) {
-				observers[ observers.length ] = observer;
-			}
-		}
-	}
-
-	if ( model._rootObservers ) {
-		observers = observers.concat( model._rootObservers );
-	}
-
-	return observers;
-};
-
-notifyObservers = function ( model, observers ) {
-	var i, observer;
-
-	model._setOps = [];
-
-	while ( i-- ) {
-		observer = observers[i];
-
-		
-	}
 };
 
 augment = function ( target, source ) {

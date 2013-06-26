@@ -23,14 +23,6 @@ var Statesman,
 	utils,
 
 	// helper functions
-	toString,
-	isArray,
-	isEqual,
-	normalise,
-	getObservers,
-	notifyObservers,
-	augment,
-
 	set,
 
 	defineProperty,
@@ -530,10 +522,12 @@ statesmanProto.removeComputedValue = function ( keypath ) {
 statesmanProto.reset = function ( data, options ) {
 	this.data = {};
 	
+	// TODO to get proper change hash, should we just do a non-silent set?
+	// what about e.g. Ractive adaptor?
 	this.set( data, { silent: true });
 	this.fire( 'reset' );
 
-	notifyDependantsOf( this, '' );
+	notifyObservers( this, '' );
 
 	return this;
 };
@@ -588,11 +582,11 @@ statesmanProto.reset = function ( data, options ) {
 		}
 
 		// Notify direct dependants of upstream keypaths...
-		notifyMultipleDependants( this, allUpstreamChanges, true );
+		notifyMultipleObservers( this, allUpstreamChanges, true );
 
 		// ...and dependants of this and downstream keypaths
 		if ( allChanges.length ) {
-			notifyMultipleDependants( this, allChanges );
+			notifyMultipleObservers( this, allChanges );
 		}
 
 		
@@ -698,57 +692,10 @@ statesmanProto.subset = function ( path ) {
 
 	return this._subsets[ path ];
 };
-/*var addToQueue = function ( statesman, callback, value, previous, context ) {
-	var i;
-
-	// Remove queued item with this callback, if there is one
-	for ( i=0; i<statesman._observerQueue.length; i+=1 ) {
-		if ( statesman._observerQueue[i].c === callback ) {
-			statesman._observerQueue.splice( i, 1 );
-			break;
-		}
-	}
-
-	// Append a new item
-	statesman._observerQueue[ statesman._observerQueue.length ] = {
-		c: callback,
-		v: value,
-		p: previous,
-		cx: context
-	};
-};*/
-/*var addToSetterQueue = function ( statesman, keypath, value, options ) {
-	var payload, k;
-
-	if ( typeof keypath === 'object' ) {
-		options = value;
-		for ( k in keypath ) {
-			if ( keypath.hasOwnProperty( k ) ) {
-				statesman._addToSetterQueue( k, keypath[k], options );
-			}
-		}
-		return;
-	}
-
-	if ( options && options.silent ) {
-		if ( !statesman._silentSetterPayload ) {
-			statesman._silentSetterPayload = {};
-		}
-
-		payload = statesman._silentSetterPayload;
-	} else {
-		if ( !statesman._setterPayload ) {
-			statesman._setterPayload = {};
-		}
-
-		payload = statesman._setterPayload;
-	}
-
-	payload[ keypath ] = value;
-};*/
 var clearCache = function ( statesman, keypath ) {
 	var children = statesman._cacheMap[ keypath ];
 
+	// TODO
 	delete statesman._cache[ keypath ];
 
 	if ( !children ) {
@@ -759,7 +706,7 @@ var clearCache = function ( statesman, keypath ) {
 		clearCache( statesman, children.pop() );
 	}
 };
-var notifyDependantsOf = function ( statesman, keypath, directOnly ) {
+var notifyObservers = function ( statesman, keypath, directOnly ) {
 
 	var deps, i, map;
 
@@ -780,17 +727,17 @@ var notifyDependantsOf = function ( statesman, keypath, directOnly ) {
 	if ( map ) {
 		i = map.length;
 		while ( i-- ) {
-			notifyDependantsOf( statesman, map[i] );
+			notifyObservers( statesman, map[i] );
 		}
-	}
-	
+	}	
 };
-var notifyMultipleDependants = function ( statesman, keypaths, directOnly ) {
+
+var notifyMultipleObservers = function ( statesman, keypaths, directOnly ) {
 	var i;
 
 	i = keypaths.length;
 	while ( i-- ) {
-		notifyDependantsOf( statesman, keypaths[i],directOnly );
+		notifyObservers( statesman, keypaths[i],directOnly );
 	}
 };
 var propagateChanges = function ( statesman ) {
@@ -1330,11 +1277,14 @@ events.fire = function ( eventName ) {
 	};
 
 }());
+// Miscellaneous helper functions
+var toString, isArray, isEqual, normalise, augment;
+
 toString = Object.prototype.toString;
 
 isArray = function ( thing ) {
 	return toString.call( thing ) === '[object Array]';
-}
+};
 
 isEqual = function ( a, b ) {
 	// workaround for null, because typeof null = 'object'...
@@ -1355,50 +1305,6 @@ isEqual = function ( a, b ) {
 
 normalise = function ( keypath ) {
 	return normalisedKeypathCache[ keypath ] || ( normalisedKeypathCache[ keypath ] = keypath.replace( /\[\s*([0-9]+)\s*\]/g, '.$1' ) );
-};
-
-getObservers = function ( model, keypath ) {
-	var observers, upstream, observer, keys, i;
-
-	// direct and downstream observers
-	observers = model._observers[ keypath ];
-
-	// upstream
-	keys = keypath.split( '.' );
-
-	while ( keys.length ) {
-		keys.pop();
-		keypath = keys.join( '.' );
-		upstream = model._observers[ keypath ];
-
-		i = upstream.length;
-		while ( i-- ) {
-			observer = upstream[i];
-
-			// we only want direct observers of the upstream keypath
-			if ( observer.observedKeypath === keypath ) {
-				observers[ observers.length ] = observer;
-			}
-		}
-	}
-
-	if ( model._rootObservers ) {
-		observers = observers.concat( model._rootObservers );
-	}
-
-	return observers;
-};
-
-notifyObservers = function ( model, observers ) {
-	var i, observer;
-
-	model._setOps = [];
-
-	while ( i-- ) {
-		observer = observers[i];
-
-		
-	}
 };
 
 augment = function ( target, source ) {
