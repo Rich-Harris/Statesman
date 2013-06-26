@@ -68,7 +68,7 @@
 
 	Observer = function ( statesman, keypath, callback, options ) {
 		this.statesman = statesman;
-		this.keypath = keypath;
+		this.keypath = normalise( keypath );
 		this.callback = callback;
 
 		// default to root as context, but allow it to be overridden
@@ -83,8 +83,7 @@
 		update: function () {
 			var value;
 
-			// TODO create, and use, an internal get method instead - we can skip checks
-			value = this.statesman.get( this.keypath, true );
+			value = get( this.statesman, this.keypath );
 
 			if ( !isEqual( value, this.value ) ) {
 				// wrap the callback in a try-catch block, and only throw error in
