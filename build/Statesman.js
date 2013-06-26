@@ -759,13 +759,6 @@ var clearCache = function ( statesman, keypath ) {
 		clearCache( statesman, children.pop() );
 	}
 };
-var dispatchSetterQueue = function ( statesman ) {
-	statesman.set( statesman._silentSetterPayload, { silent: true });
-	statesman._silentSetterPayload = null;
-
-	statesman.set( statesman._setterPayload );
-	statesman._setterPayload = null;
-};
 var notifyDependantsOf = function ( statesman, keypath, directOnly ) {
 
 	var deps, i, map;
