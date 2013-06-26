@@ -1,4 +1,4 @@
-/*! Statesman - v0.1.6 - 2013-06-26
+/*! Statesman - v0.2.0 - 2013-06-26
 * State management made straightforward
 
 * 
