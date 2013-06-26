@@ -1,6 +1,6 @@
 {
 	"name": "statesman",
-	"description": "State management made straightforward",
+	"description": "The JavaScript state management library",
 	"version": "0.2.0",
 	"author": {
 		"name": "Rich Harris"

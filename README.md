@@ -1,5 +1,9 @@
-Statesman.js - state management made straightforward
-----------------------------------------------------
+Statesman.js
+============
+
+The JavaScript state management library
+---------------------------------------
+
 
 **Statesman.js** is a general purpose observable model, to help you keep track of your application state.
 
