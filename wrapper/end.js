@@ -16,7 +16,9 @@ if ( typeof module !== "undefined" && module.exports ) {
 
 // ...or as AMD
 else if ( typeof define === "function" && define.amd ) {
-	define( function () { return Statesman } )
+	define( function () {
+		return Statesman;
+	});
 }
 
 // ...or as browser global

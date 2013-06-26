@@ -3,7 +3,7 @@ statesmanProto.get = function ( keypath ) {
 };
 
 var get = function ( statesman, keypath, keys, forceCache ) {
-	var computed, key, lastKey, parentKeypath, parentValue, value;
+	var computed, lastKey, parentKeypath, parentValue, value;
 
 	if ( !keypath ) {
 		return statesman.data;
@@ -11,15 +11,15 @@ var get = function ( statesman, keypath, keys, forceCache ) {
 
 	// if this is a non-cached computed value, compute it, unless we
 	// specifically want the cached value
-	if ( computed = statesman._computed[ keypath ] ) {
+	if ( computed = statesman.computed[ keypath ] ) {
 		if ( !forceCache && !computed.cache && !computed.override ) {
-			statesman._cache[ keypath ] = computed.getter();
+			statesman.cache[ keypath ] = computed.getter();
 		}
 	}
 
 	// cache hit?
-	if ( statesman._cache.hasOwnProperty( keypath ) ) {
-		return statesman._cache[ keypath ];
+	if ( statesman.cache.hasOwnProperty( keypath ) ) {
+		return statesman.cache[ keypath ];
 	}
 
 	keys = keys || keypath.split( '.' );
@@ -30,12 +30,12 @@ var get = function ( statesman, keypath, keys, forceCache ) {
 
 	if ( typeof parentValue === 'object' && parentValue.hasOwnProperty( lastKey ) ) {
 		value = parentValue[ lastKey ];
-		statesman._cache[ keypath ] = value;
+		statesman.cache[ keypath ] = value;
 
-		if ( !statesman._cacheMap[ parentKeypath ] ) {
-			statesman._cacheMap[ parentKeypath ] = [];
+		if ( !statesman.cacheMap[ parentKeypath ] ) {
+			statesman.cacheMap[ parentKeypath ] = [];
 		}
-		statesman._cacheMap[ parentKeypath ].push( keypath );
+		statesman.cacheMap[ parentKeypath ].push( keypath );
 	}
 
 	return value;

@@ -23,7 +23,20 @@ var Statesman,
 	utils,
 
 	// helper functions
+	isEqual,
+	normalise,
+	augment,
+
 	set,
+	get,
+	
+	clearCache,
+	notifyObservers,
+	notifyMultipleObservers,
+	propagateChanges,
+	propagateChange,
+	registerDependant,
+	unregisterDependant,
 
 	defineProperty,
 	defineProperties,
@@ -101,34 +114,39 @@ Statesman = function ( data ) {
 	defineProperties( this, {
 		data: { value: data || {}, writable: true },
 
-		_subs: { value: {}, writable: true },
-		_cache: { value: {} },
-		_cacheMap: { value: {} },
+		// Events
+		subs: { value: {}, writable: true },
+		
+		// Internal value cache
+		cache: { value: {} },
+		cacheMap: { value: {} },
 
-		_deps: { value: {} },
-		_depsMap: { value: {} },
+		// Observers
+		deps: { value: {} },
+		depsMap: { value: {} },
 
-		_refs: { value: {} },
-		_refsMap: { value: {} },
+		// Computed value references
+		refs: { value: {} },
+		refsMap: { value: {} },
 
-		_computed: { value: {} },
+		// Computed values
+		computed: { value: {} },
 
-		_observers: { value: {} },
-		_subsets: { value: {} },
-		_deferred: { value: [] },
+		// Subsets
+		subsets: { value: {} },
+		
+		// Deferred updates (i.e. computed values with more than one reference)
+		deferred: { value: [] },
 
-		_observerQueue: { value: [] },
-		_silentSetterPayload: { value: null, writable: true  },
-		_setterPayload: { value: null, writable: true  },
-
-		_consolidatingObservers: { value: 0, writable: true },
-		_consolidatingSetters: { value: 0, writable: true },
-		_computing: { value: 0, writable: true }
+		// Place to store model changes prior to notifying consumers
+		changes: { value: null, writable: true },
+		upstreamChanges: { value: null, writable: true },
+		changeHash: { value: null, writable: true }
 	});
 };
 (function ( statesmanProto ) {
 
-	var Computed, Reference, varPattern, validate, emptyArray;
+	var Computed, Reference, validate, emptyArray;
 
 	statesmanProto.compute = function ( keypath, signature ) {
 		var result, k, computed;
@@ -152,17 +170,17 @@ Statesman = function ( data ) {
 
 	Computed = function ( statesman, keypath, signature ) {
 		
-		var uncacheable, dependencies, i;
+		var i;
 
 		// teardown any existing computed values on this keypath
-		if ( statesman._computed[ keypath ] ) {
-			statesman._computed[ keypath ].teardown();
+		if ( statesman.computed[ keypath ] ) {
+			statesman.computed[ keypath ].teardown();
 		}
 
 		this.statesman = statesman;
 		this.keypath = keypath;
 
-		statesman._computed[ keypath ] = this;
+		statesman.computed[ keypath ] = this;
 
 		// if we were given a string, we need to compile it
 		if ( typeof signature === 'string' ) {
@@ -207,7 +225,7 @@ Statesman = function ( data ) {
 			}
 
 			else if ( !this.deferred ) {
-				this.statesman._deferred.push( this );
+				this.statesman.deferred.push( this );
 				this.deferred = true;
 			}
 		},
@@ -288,7 +306,7 @@ Statesman = function ( data ) {
 		teardown: function () {
 			while ( this.refs.length ) {
 				this.refs.pop().teardown();
-				this.statesman._computed[ this.keypath ] = null;
+				this.statesman.computed[ this.keypath ] = null;
 			}
 		}
 	};
@@ -367,7 +385,7 @@ statesmanProto.get = function ( keypath ) {
 };
 
 var get = function ( statesman, keypath, keys, forceCache ) {
-	var computed, key, lastKey, parentKeypath, parentValue, value;
+	var computed, lastKey, parentKeypath, parentValue, value;
 
 	if ( !keypath ) {
 		return statesman.data;
@@ -375,15 +393,15 @@ var get = function ( statesman, keypath, keys, forceCache ) {
 
 	// if this is a non-cached computed value, compute it, unless we
 	// specifically want the cached value
-	if ( computed = statesman._computed[ keypath ] ) {
+	if ( computed = statesman.computed[ keypath ] ) {
 		if ( !forceCache && !computed.cache && !computed.override ) {
-			statesman._cache[ keypath ] = computed.getter();
+			statesman.cache[ keypath ] = computed.getter();
 		}
 	}
 
 	// cache hit?
-	if ( statesman._cache.hasOwnProperty( keypath ) ) {
-		return statesman._cache[ keypath ];
+	if ( statesman.cache.hasOwnProperty( keypath ) ) {
+		return statesman.cache[ keypath ];
 	}
 
 	keys = keys || keypath.split( '.' );
@@ -394,12 +412,12 @@ var get = function ( statesman, keypath, keys, forceCache ) {
 
 	if ( typeof parentValue === 'object' && parentValue.hasOwnProperty( lastKey ) ) {
 		value = parentValue[ lastKey ];
-		statesman._cache[ keypath ] = value;
+		statesman.cache[ keypath ] = value;
 
-		if ( !statesman._cacheMap[ parentKeypath ] ) {
-			statesman._cacheMap[ parentKeypath ] = [];
+		if ( !statesman.cacheMap[ parentKeypath ] ) {
+			statesman.cacheMap[ parentKeypath ] = [];
 		}
-		statesman._cacheMap[ parentKeypath ].push( keypath );
+		statesman.cacheMap[ parentKeypath ].push( keypath );
 	}
 
 	return value;
@@ -474,7 +492,7 @@ var get = function ( statesman, keypath, keys, forceCache ) {
 
 	Observer = function ( statesman, keypath, callback, options ) {
 		this.statesman = statesman;
-		this.keypath = keypath;
+		this.keypath = normalise( keypath );
 		this.callback = callback;
 
 		// default to root as context, but allow it to be overridden
@@ -489,8 +507,7 @@ var get = function ( statesman, keypath, keys, forceCache ) {
 		update: function () {
 			var value;
 
-			// TODO create, and use, an internal get method instead - we can skip checks
-			value = this.statesman.get( this.keypath, true );
+			value = get( this.statesman, this.keypath );
 
 			if ( !isEqual( value, this.value ) ) {
 				// wrap the callback in a try-catch block, and only throw error in
@@ -498,7 +515,7 @@ var get = function ( statesman, keypath, keys, forceCache ) {
 				try {
 					this.callback.call( this.context, value, this.value );
 				} catch ( err ) {
-					if ( statesman.debug ) {
+					if ( this.statesman.debug ) {
 						throw err;
 					}
 				}
@@ -513,13 +530,13 @@ var get = function ( statesman, keypath, keys, forceCache ) {
 	
 }( statesmanProto ));
 statesmanProto.removeComputedValue = function ( keypath ) {
-	if ( this._computed[ keypath ] ) {
-		this._computed[ keypath ].teardown();
+	if ( this.computed[ keypath ] ) {
+		this.computed[ keypath ].teardown();
 	}
 
 	return this;
 };
-statesmanProto.reset = function ( data, options ) {
+statesmanProto.reset = function ( data ) {
 	this.data = {};
 	
 	// TODO to get proper change hash, should we just do a non-silent set?
@@ -536,10 +553,7 @@ statesmanProto.reset = function ( data, options ) {
 	var integerPattern = /^\s*[0-9]+\s*$/, updateModel, mergeChanges;
 
 	statesmanProto.set = function ( keypath, value, options ) {
-		var changes, upstreamChanges, allChanges, allUpstreamChanges, changeHash, i, k, normalised, keys, previous, computed;
-
-		// upstreamChanges = [];
-		// changes = [];
+		var allChanges, allUpstreamChanges, k, normalised;
 
 		this.changes = [];
 		this.upstreamChanges = [];
@@ -600,11 +614,11 @@ statesmanProto.reset = function ( data, options ) {
 	};
 
 	set = function ( statesman, keypath, value ) {
-		var previous, obj, keys, computed, index;
+		var previous, keys, computed;
 
 		// if this is a computed value, make sure it has a setter or can be
 		// overridden. Unless it called set itself
-		if ( ( computed = statesman._computed[ keypath ] ) && !computed.setting ) {
+		if ( ( computed = statesman.computed[ keypath ] ) && !computed.setting ) {
 			computed.setter( value );
 			return;
 		}
@@ -686,17 +700,17 @@ statesmanProto.subset = function ( path ) {
 		throw 'No subset path specified';
 	}
 
-	if ( !this._subsets[ path ] ) {
-		this._subsets[ path ] = new Subset( path, this );
+	if ( !this.subsets[ path ] ) {
+		this.subsets[ path ] = new Subset( path, this );
 	}
 
-	return this._subsets[ path ];
+	return this.subsets[ path ];
 };
-var clearCache = function ( statesman, keypath ) {
-	var children = statesman._cacheMap[ keypath ];
+clearCache = function ( statesman, keypath ) {
+	var children = statesman.cacheMap[ keypath ];
 
 	// TODO
-	delete statesman._cache[ keypath ];
+	delete statesman.cache[ keypath ];
 
 	if ( !children ) {
 		return;
@@ -706,11 +720,11 @@ var clearCache = function ( statesman, keypath ) {
 		clearCache( statesman, children.pop() );
 	}
 };
-var notifyObservers = function ( statesman, keypath, directOnly ) {
+notifyObservers = function ( statesman, keypath, directOnly ) {
 
 	var deps, i, map;
 
-	deps = statesman._deps[ keypath ];
+	deps = statesman.deps[ keypath ];
 
 	if ( deps ) {
 		i = deps.length;
@@ -723,7 +737,7 @@ var notifyObservers = function ( statesman, keypath, directOnly ) {
 		return;
 	}
 
-	map = statesman._depsMap[ keypath ];
+	map = statesman.depsMap[ keypath ];
 	if ( map ) {
 		i = map.length;
 		while ( i-- ) {
@@ -732,7 +746,7 @@ var notifyObservers = function ( statesman, keypath, directOnly ) {
 	}	
 };
 
-var notifyMultipleObservers = function ( statesman, keypaths, directOnly ) {
+notifyMultipleObservers = function ( statesman, keypaths, directOnly ) {
 	var i;
 
 	i = keypaths.length;
@@ -740,8 +754,8 @@ var notifyMultipleObservers = function ( statesman, keypaths, directOnly ) {
 		notifyObservers( statesman, keypaths[i],directOnly );
 	}
 };
-var propagateChanges = function ( statesman ) {
-	var i, changes, upstreamChanges, keypath, refs, map, computed;
+propagateChanges = function ( statesman ) {
+	var i, changes, upstreamChanges, keypath, computed;
 
 	changes = statesman.changes;
 	upstreamChanges = statesman.upstreamChanges;
@@ -762,19 +776,19 @@ var propagateChanges = function ( statesman ) {
 		propagateChange( statesman, keypath );
 	}
 
-	while ( statesman._deferred.length ) {
-		computed = statesman._deferred.pop();
+	while ( statesman.deferred.length ) {
+		computed = statesman.deferred.pop();
 		computed.update();
 		computed.deferred = false;
 	}
 };
 
 
-var propagateChange = function ( statesman, keypath, directOnly ) {
+propagateChange = function ( statesman, keypath, directOnly ) {
 
 	var refs, map, i;
 
-	refs = statesman._refs[ keypath ];
+	refs = statesman.refs[ keypath ];
 	if ( refs ) {
 		i = refs.length;
 		while ( i-- ) {
@@ -788,7 +802,7 @@ var propagateChange = function ( statesman, keypath, directOnly ) {
 		return;
 	}
 
-	map = statesman._refsMap[ keypath ];
+	map = statesman.refsMap[ keypath ];
 	if ( map ) {
 		i = map.length;
 		while ( i-- ) {
@@ -796,7 +810,7 @@ var propagateChange = function ( statesman, keypath, directOnly ) {
 		}
 	}
 };
-var registerDependant = function ( dependant, isReference ) {
+registerDependant = function ( dependant, isReference ) {
 
 	var statesman, keypath, deps, keys, parentKeypath, map, baseDeps, baseMap;
 
@@ -804,11 +818,11 @@ var registerDependant = function ( dependant, isReference ) {
 	keypath = dependant.keypath;
 
 	if ( isReference ) {
-		baseDeps = statesman._refs;
-		baseMap = statesman._refsMap;
+		baseDeps = statesman.refs;
+		baseMap = statesman.refsMap;
 	} else {
-		baseDeps = statesman._deps;
-		baseMap = statesman._depsMap;
+		baseDeps = statesman.deps;
+		baseMap = statesman.depsMap;
 	}
 
 	deps = baseDeps[ keypath ] || ( baseDeps[ keypath ] = [] );
@@ -833,7 +847,7 @@ var registerDependant = function ( dependant, isReference ) {
 		keypath = parentKeypath;
 	}
 };
-var unregisterDependant = function ( dependant, isReference ) {
+unregisterDependant = function ( dependant, isReference ) {
 
 	var statesman, keypath, deps, keys, parentKeypath, map, baseDeps, baseMap;
 
@@ -841,11 +855,11 @@ var unregisterDependant = function ( dependant, isReference ) {
 	keypath = dependant.keypath;
 
 	if ( isReference ) {
-		baseDeps = statesman._refs;
-		baseMap = statesman._refsMap;
+		baseDeps = statesman.refs;
+		baseMap = statesman.refsMap;
 	} else {
-		baseDeps = statesman._deps;
-		baseMap = statesman._depsMap;
+		baseDeps = statesman.deps;
+		baseMap = statesman.depsMap;
 	}
 
 	deps = baseDeps[ keypath ];
@@ -880,16 +894,16 @@ utils = {
 Subset = function( path, state ) {
 	var self = this, keypathPattern, pathDotLength;
 
-	this._path = path;
-	this._pathDot = path + '.';
-	this._root = state;
+	this.path = path;
+	this.pathDot = path + '.';
+	this.root = state;
 
 	// events stuff
-	this._subs = {};
-	keypathPattern = new RegExp( '^' + this._pathDot.replace( '.', '\\.' ) );
-	pathDotLength = this._pathDot.length;
+	this.subs = {};
+	keypathPattern = new RegExp( '^' + this.pathDot.replace( '.', '\\.' ) );
+	pathDotLength = this.pathDot.length;
 
-	this._root.on( 'set', function ( keypath, value, options ) {
+	this.root.on( 'set', function ( keypath, value, options ) {
 		var localKeypath, k, unprefixed;
 
 		if ( typeof keypath === 'object' ) {
@@ -907,7 +921,7 @@ Subset = function( path, state ) {
 			return;
 		}
 
-		if ( keypath === this._path ) {
+		if ( keypath === this.path ) {
 			self.fire( 'reset' );
 			return;
 		}
@@ -944,11 +958,11 @@ Subset = function( path, state ) {
 
 	compute = function ( subset, keypath, signature ) {
 
-		var path = subset._pathDot, i;
+		var path = subset.pathDot, i;
 
 		if ( typeof signature === 'string' ) {
-			signature = compile( signature, subset._root, path );
-			return subset._root.compute( path + keypath, signature );
+			signature = compile( signature, subset.root, path );
+			return subset.root.compute( path + keypath, signature );
 		}
 
 		if ( typeof signature === 'function' ) {
@@ -971,81 +985,19 @@ Subset = function( path, state ) {
 			signature.context = subset;
 		}
 
-		return subset._root.compute( path + keypath, signature );
+		return subset.root.compute( path + keypath, signature );
 	};
 
 }( subsetProto ));
-
-
-
-
-
-/*subsetProto.compute = function ( keypath, options ) {
-	var self = this, k, map, processOptions, context, path;
-
-	path = this._pathDot;
-
-	options.context = options.context || this;
-
-	processOptions = function ( options ) {
-		var triggers, i, compiled;
-
-		if ( typeof options === 'string' ) {
-			return {
-				fn: options,
-				context: self,
-				prefix: path
-			};
-		}
-
-		triggers = options.triggers || options.trigger;
-
-		if ( typeof triggers === 'string' ) {
-			triggers = [ triggers ];
-		}
-
-		if ( triggers ) {
-			delete options.triggers;
-			delete options.trigger;
-		}
-
-		i = triggers.length;
-		while ( i-- ) {
-			triggers[i] = path + triggers[i];
-		}
-
-		options.triggers = triggers;
-
-		if ( !options.context ) {
-			options.context = self;
-		}
-		return options;
-	};
-
-	// Multiple computed values
-	if ( typeof keypath === 'object' ) {
-		map = {};
-		for ( k in keypath ) {
-			map[ this._pathDot + k ] = processOptions( keypath[ k ] );
-		}
-
-		return this._root.compute( map );
-	}
-
-	// Single computed value
-	return this._root.compute( this._pathDot + keypath, processOptions( options ) );
-};*/
 subsetProto.get = function ( keypath ) {
 	if ( !keypath ) {
-		return this._root.get( this._path );
+		return this.root.get( this.path );
 	}
 
-	return this._root.get( this._pathDot + keypath );
+	return this.root.get( this.pathDot + keypath );
 };
 subsetProto.observe = function ( keypath, callback, options ) {
-	var args, k, map;
-
-	args = Array.prototype.slice.call( arguments );
+	var k, map;
 
 	// overload - observe multiple keypaths
 	if ( typeof keypath === 'object' ) {
@@ -1053,7 +1005,9 @@ subsetProto.observe = function ( keypath, callback, options ) {
 
 		map = {};
 		for ( k in keypath ) {
-			map[ this._pathDot + k ] = keypath[ k ];
+			if ( keypath.hasOwnProperty( k ) ) {
+				map[ this.pathDot + k ] = keypath[ k ];
+			}
 		}
 
 		if ( options ) {
@@ -1062,22 +1016,22 @@ subsetProto.observe = function ( keypath, callback, options ) {
 			options = { context: this };
 		}
 
-		return this._root.observe( map, options );
+		return this.root.observe( map, options );
 	}
 
 	// overload - omit keypath to observe root
 	if ( typeof keypath === 'function' ) {
 		options = callback;
 		callback = keypath;
-		keypath = this._path;
+		keypath = this.path;
 	}
 
 	else if ( keypath === '' ) {
-		keypath = this._path;
+		keypath = this.path;
 	}
 
 	else {
-		keypath = ( this._pathDot + keypath );
+		keypath = ( this.pathDot + keypath );
 	}
 
 	if ( options ) {
@@ -1086,14 +1040,14 @@ subsetProto.observe = function ( keypath, callback, options ) {
 		options = { context: this };
 	}
 
-	return this._root.observe( keypath, callback, options );
+	return this.root.observe( keypath, callback, options );
 };
 subsetProto.removeComputedValue = function ( keypath ) {
-	this._root.removeComputedValue( this._pathDot + keypath );
+	this.root.removeComputedValue( this.pathDot + keypath );
 	return this;
 };
 subsetProto.reset = function ( data ) {
-	this._root.set( this._path, data );
+	this.root.set( this.path, data );
 	return this;
 };
 subsetProto.set = function ( keypath, value, options ) {
@@ -1105,19 +1059,19 @@ subsetProto.set = function ( keypath, value, options ) {
 
 		for ( k in keypath ) {
 			if ( keypath.hasOwnProperty( k ) ) {
-				map[ this._pathDot + k ] = keypath[ k ];
+				map[ this.pathDot + k ] = keypath[ k ];
 			}
 		}
 		
-		this._root.set( map, options );
+		this.root.set( map, options );
 		return this;
 	}
 
-	this._root.set( this._pathDot + keypath, value, options );
+	this.root.set( this.pathDot + keypath, value, options );
 	return this;
 };
 subsetProto.subset = function ( keypath ) {
-	return this._root.subset( this._pathDot + keypath );
+	return this.root.subset( this.pathDot + keypath );
 };
 events = {};
 
@@ -1141,11 +1095,11 @@ events.on = function ( eventName, callback ) {
 		};
 	}
 
-	if ( !this._subs[ eventName ] ) {
-		this._subs[ eventName ] = [];
+	if ( !this.subs[ eventName ] ) {
+		this.subs[ eventName ] = [];
 	}
 
-	listeners = this._subs[ eventName ];
+	listeners = this.subs[ eventName ];
 	listeners[ listeners.length ] = callback;
 
 	return {
@@ -1175,11 +1129,11 @@ events.once = function ( eventName, callback ) {
 		};
 	}
 
-	if ( !this._subs[ eventName ] ) {
-		this._subs[ eventName ] = [];
+	if ( !this.subs[ eventName ] ) {
+		this.subs[ eventName ] = [];
 	}
 
-	listeners = this._subs[ eventName ];
+	listeners = this.subs[ eventName ];
 
 	suicidalCallback = function () {
 		callback.apply( self, arguments );
@@ -1199,16 +1153,16 @@ events.off = function ( eventName, callback ) {
 	var subscribers, index;
 
 	if ( !eventName ) {
-		this._subs = {};
+		this.subs = {};
 		return this;
 	}
 
 	if ( !callback ) {
-		delete this._subs[ eventName ];
+		delete this.subs[ eventName ];
 		return this;
 	}
 
-	subscribers = this._subs[ eventName ];
+	subscribers = this.subs[ eventName ];
 	if ( subscribers ) {
 		index = subscribers.indexOf( callback );
 
@@ -1217,7 +1171,7 @@ events.off = function ( eventName, callback ) {
 		}
 
 		if ( !subscribers.length ) {
-			delete this._subs[ eventName ];
+			delete this.subs[ eventName ];
 		}
 	}
 
@@ -1227,7 +1181,7 @@ events.off = function ( eventName, callback ) {
 events.fire = function ( eventName ) {
 	var subscribers, args, len, i;
 
-	subscribers = this._subs[ eventName ];
+	subscribers = this.subs[ eventName ];
 
 	if ( !subscribers ) {
 		return this;
@@ -1245,7 +1199,7 @@ events.fire = function ( eventName ) {
 	var varPattern = /\$\{\s*([a-zA-Z0-9_$\[\]\.]+)\s*\}/g;
 
 	compile = function ( str, statesman, prefix ) {
-		var expanded, dependencies, fn, compiled, i;
+		var expanded, dependencies, fn, compiled;
 
 		prefix = prefix || '';
 		dependencies = [];
@@ -1278,14 +1232,6 @@ events.fire = function ( eventName ) {
 
 }());
 // Miscellaneous helper functions
-var toString, isArray, isEqual, normalise, augment;
-
-toString = Object.prototype.toString;
-
-isArray = function ( thing ) {
-	return toString.call( thing ) === '[object Array]';
-};
-
 isEqual = function ( a, b ) {
 	// workaround for null, because typeof null = 'object'...
 	if ( a === null && b === null ) {
@@ -1334,7 +1280,9 @@ if ( typeof module !== "undefined" && module.exports ) {
 
 // ...or as AMD
 else if ( typeof define === "function" && define.amd ) {
-	define( function () { return Statesman } )
+	define( function () {
+		return Statesman;
+	});
 }
 
 // ...or as browser global

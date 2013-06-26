@@ -1,8 +1,8 @@
-var clearCache = function ( statesman, keypath ) {
-	var children = statesman._cacheMap[ keypath ];
+clearCache = function ( statesman, keypath ) {
+	var children = statesman.cacheMap[ keypath ];
 
 	// TODO
-	delete statesman._cache[ keypath ];
+	delete statesman.cache[ keypath ];
 
 	if ( !children ) {
 		return;

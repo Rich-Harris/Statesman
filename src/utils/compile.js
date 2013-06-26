@@ -3,7 +3,7 @@
 	var varPattern = /\$\{\s*([a-zA-Z0-9_$\[\]\.]+)\s*\}/g;
 
 	compile = function ( str, statesman, prefix ) {
-		var expanded, dependencies, fn, compiled, i;
+		var expanded, dependencies, fn, compiled;
 
 		prefix = prefix || '';
 		dependencies = [];

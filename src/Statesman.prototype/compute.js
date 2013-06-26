@@ -1,6 +1,6 @@
 (function ( statesmanProto ) {
 
-	var Computed, Reference, varPattern, validate, emptyArray;
+	var Computed, Reference, validate, emptyArray;
 
 	statesmanProto.compute = function ( keypath, signature ) {
 		var result, k, computed;
@@ -24,17 +24,17 @@
 
 	Computed = function ( statesman, keypath, signature ) {
 		
-		var uncacheable, dependencies, i;
+		var i;
 
 		// teardown any existing computed values on this keypath
-		if ( statesman._computed[ keypath ] ) {
-			statesman._computed[ keypath ].teardown();
+		if ( statesman.computed[ keypath ] ) {
+			statesman.computed[ keypath ].teardown();
 		}
 
 		this.statesman = statesman;
 		this.keypath = keypath;
 
-		statesman._computed[ keypath ] = this;
+		statesman.computed[ keypath ] = this;
 
 		// if we were given a string, we need to compile it
 		if ( typeof signature === 'string' ) {
@@ -79,7 +79,7 @@
 			}
 
 			else if ( !this.deferred ) {
-				this.statesman._deferred.push( this );
+				this.statesman.deferred.push( this );
 				this.deferred = true;
 			}
 		},
@@ -160,7 +160,7 @@
 		teardown: function () {
 			while ( this.refs.length ) {
 				this.refs.pop().teardown();
-				this.statesman._computed[ this.keypath ] = null;
+				this.statesman.computed[ this.keypath ] = null;
 			}
 		}
 	};

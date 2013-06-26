@@ -10,7 +10,7 @@ modules[ modules.length ] = {
 		},
 
 		{
-			title: 'Model instance has following methods: get, set, reset, observe, unobserve',
+			title: 'Statesman instance has following methods: get, set, reset, observe, unobserve',
 			test: function () {
 				var model = new Statesman();
 
@@ -22,17 +22,7 @@ modules[ modules.length ] = {
 		},
 
 		{
-			title: 'Model instance has empty data and _observers members',
-			test: function () {
-				var model = new Statesman();
-
-				ok( _.isObject( model.data ) && _.isEmpty( model.data ) );
-				ok( _.isObject( model._observers ) && _.isEmpty( model._observers ) );
-			}
-		},
-
-		{
-			title: 'Model stores data passed in at initialization on the data member',
+			title: 'Statesman instance stores data passed in at initialization on the data member',
 			test: function () {
 				var data = { foo: 'bar' }, model = new Statesman( data );
 

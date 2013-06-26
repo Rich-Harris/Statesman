@@ -2,15 +2,15 @@ modules[ modules.length ] = {
 	name: 'Observers',
 	tests: [
 		{
-			title: 'Observing "foo" adds a dependant to state._observers.foo',
+			title: 'Observing "foo" adds a dependant to state.deps.foo',
 			test: function () {
 				var state = new Statesman(), callback = function () {}, observer;
 
 				state.observe( 'foo', callback );
-				ok( _.isArray( state._deps.foo ) );
-				ok( _.isObject( state._deps.foo[0] ) );
+				ok( _.isArray( state.deps.foo ) );
+				ok( _.isObject( state.deps.foo[0] ) );
 
-				observer = state._deps.foo[0];
+				observer = state.deps.foo[0];
 
 				equal( callback, observer.callback );
 			}

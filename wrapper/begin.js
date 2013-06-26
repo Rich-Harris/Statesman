@@ -15,7 +15,20 @@ var Statesman,
 	utils,
 
 	// helper functions
+	isEqual,
+	normalise,
+	augment,
+
 	set,
+	get,
+	
+	clearCache,
+	notifyObservers,
+	notifyMultipleObservers,
+	propagateChanges,
+	propagateChange,
+	registerDependant,
+	unregisterDependant,
 
 	defineProperty,
 	defineProperties,

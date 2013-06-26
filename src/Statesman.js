@@ -2,28 +2,33 @@ Statesman = function ( data ) {
 	defineProperties( this, {
 		data: { value: data || {}, writable: true },
 
-		_subs: { value: {}, writable: true },
-		_cache: { value: {} },
-		_cacheMap: { value: {} },
+		// Events
+		subs: { value: {}, writable: true },
+		
+		// Internal value cache
+		cache: { value: {} },
+		cacheMap: { value: {} },
 
-		_deps: { value: {} },
-		_depsMap: { value: {} },
+		// Observers
+		deps: { value: {} },
+		depsMap: { value: {} },
 
-		_refs: { value: {} },
-		_refsMap: { value: {} },
+		// Computed value references
+		refs: { value: {} },
+		refsMap: { value: {} },
 
-		_computed: { value: {} },
+		// Computed values
+		computed: { value: {} },
 
-		_observers: { value: {} },
-		_subsets: { value: {} },
-		_deferred: { value: [] },
+		// Subsets
+		subsets: { value: {} },
+		
+		// Deferred updates (i.e. computed values with more than one reference)
+		deferred: { value: [] },
 
-		_observerQueue: { value: [] },
-		_silentSetterPayload: { value: null, writable: true  },
-		_setterPayload: { value: null, writable: true  },
-
-		_consolidatingObservers: { value: 0, writable: true },
-		_consolidatingSetters: { value: 0, writable: true },
-		_computing: { value: 0, writable: true }
+		// Place to store model changes prior to notifying consumers
+		changes: { value: null, writable: true },
+		upstreamChanges: { value: null, writable: true },
+		changeHash: { value: null, writable: true }
 	});
 };

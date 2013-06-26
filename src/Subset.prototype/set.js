@@ -7,14 +7,14 @@ subsetProto.set = function ( keypath, value, options ) {
 
 		for ( k in keypath ) {
 			if ( keypath.hasOwnProperty( k ) ) {
-				map[ this._pathDot + k ] = keypath[ k ];
+				map[ this.pathDot + k ] = keypath[ k ];
 			}
 		}
 		
-		this._root.set( map, options );
+		this.root.set( map, options );
 		return this;
 	}
 
-	this._root.set( this._pathDot + keypath, value, options );
+	this.root.set( this.pathDot + keypath, value, options );
 	return this;
 };

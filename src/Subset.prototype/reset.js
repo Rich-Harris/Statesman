@@ -1,4 +1,4 @@
 subsetProto.reset = function ( data ) {
-	this._root.set( this._path, data );
+	this.root.set( this.path, data );
 	return this;
 };

@@ -504,15 +504,15 @@ modules[ modules.length ] = {
 					}
 				});
 
-				ok( _.isArray( model._refs.foo ) && model._refs.foo.length === 1 );
-				ok( _.isArray( model._refs.bar ) && model._refs.bar.length === 1 );
-				ok( _.isObject( model._computed.foobar ) );
+				ok( _.isArray( model.refs.foo ) && model.refs.foo.length === 1 );
+				ok( _.isArray( model.refs.bar ) && model.refs.bar.length === 1 );
+				ok( _.isObject( model.computed.foobar ) );
 
 				model.removeComputedValue( 'foobar' );
 
-				ok( model._refs.foo.length === 0 );
-				ok( model._refs.bar.length === 0 );
-				ok( _.isNull( model._computed.foobar ) );
+				ok( model.refs.foo.length === 0 );
+				ok( model.refs.bar.length === 0 );
+				ok( _.isNull( model.computed.foobar ) );
 			}
 		},
 

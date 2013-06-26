@@ -1,4 +1,4 @@
-var registerDependant = function ( dependant, isReference ) {
+registerDependant = function ( dependant, isReference ) {
 
 	var statesman, keypath, deps, keys, parentKeypath, map, baseDeps, baseMap;
 
@@ -6,11 +6,11 @@ var registerDependant = function ( dependant, isReference ) {
 	keypath = dependant.keypath;
 
 	if ( isReference ) {
-		baseDeps = statesman._refs;
-		baseMap = statesman._refsMap;
+		baseDeps = statesman.refs;
+		baseMap = statesman.refsMap;
 	} else {
-		baseDeps = statesman._deps;
-		baseMap = statesman._depsMap;
+		baseDeps = statesman.deps;
+		baseMap = statesman.depsMap;
 	}
 
 	deps = baseDeps[ keypath ] || ( baseDeps[ keypath ] = [] );

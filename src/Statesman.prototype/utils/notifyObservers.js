@@ -1,8 +1,8 @@
-var notifyObservers = function ( statesman, keypath, directOnly ) {
+notifyObservers = function ( statesman, keypath, directOnly ) {
 
 	var deps, i, map;
 
-	deps = statesman._deps[ keypath ];
+	deps = statesman.deps[ keypath ];
 
 	if ( deps ) {
 		i = deps.length;
@@ -15,7 +15,7 @@ var notifyObservers = function ( statesman, keypath, directOnly ) {
 		return;
 	}
 
-	map = statesman._depsMap[ keypath ];
+	map = statesman.depsMap[ keypath ];
 	if ( map ) {
 		i = map.length;
 		while ( i-- ) {
@@ -24,7 +24,7 @@ var notifyObservers = function ( statesman, keypath, directOnly ) {
 	}	
 };
 
-var notifyMultipleObservers = function ( statesman, keypaths, directOnly ) {
+notifyMultipleObservers = function ( statesman, keypaths, directOnly ) {
 	var i;
 
 	i = keypaths.length;

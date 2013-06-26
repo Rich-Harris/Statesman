@@ -1,6 +1,6 @@
 statesmanProto.removeComputedValue = function ( keypath ) {
-	if ( this._computed[ keypath ] ) {
-		this._computed[ keypath ].teardown();
+	if ( this.computed[ keypath ] ) {
+		this.computed[ keypath ].teardown();
 	}
 
 	return this;

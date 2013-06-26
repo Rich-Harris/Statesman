@@ -3,10 +3,7 @@
 	var integerPattern = /^\s*[0-9]+\s*$/, updateModel, mergeChanges;
 
 	statesmanProto.set = function ( keypath, value, options ) {
-		var changes, upstreamChanges, allChanges, allUpstreamChanges, changeHash, i, k, normalised, keys, previous, computed;
-
-		// upstreamChanges = [];
-		// changes = [];
+		var allChanges, allUpstreamChanges, k, normalised;
 
 		this.changes = [];
 		this.upstreamChanges = [];
@@ -67,11 +64,11 @@
 	};
 
 	set = function ( statesman, keypath, value ) {
-		var previous, obj, keys, computed, index;
+		var previous, keys, computed;
 
 		// if this is a computed value, make sure it has a setter or can be
 		// overridden. Unless it called set itself
-		if ( ( computed = statesman._computed[ keypath ] ) && !computed.setting ) {
+		if ( ( computed = statesman.computed[ keypath ] ) && !computed.setting ) {
 			computed.setter( value );
 			return;
 		}

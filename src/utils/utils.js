@@ -1,12 +1,4 @@
 // Miscellaneous helper functions
-var toString, isArray, isEqual, normalise, augment;
-
-toString = Object.prototype.toString;
-
-isArray = function ( thing ) {
-	return toString.call( thing ) === '[object Array]';
-};
-
 isEqual = function ( a, b ) {
 	// workaround for null, because typeof null = 'object'...
 	if ( a === null && b === null ) {

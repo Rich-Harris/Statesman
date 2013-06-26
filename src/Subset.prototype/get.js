@@ -1,7 +1,7 @@
 subsetProto.get = function ( keypath ) {
 	if ( !keypath ) {
-		return this._root.get( this._path );
+		return this.root.get( this.path );
 	}
 
-	return this._root.get( this._pathDot + keypath );
+	return this.root.get( this.pathDot + keypath );
 };

@@ -1,16 +1,16 @@
 Subset = function( path, state ) {
 	var self = this, keypathPattern, pathDotLength;
 
-	this._path = path;
-	this._pathDot = path + '.';
-	this._root = state;
+	this.path = path;
+	this.pathDot = path + '.';
+	this.root = state;
 
 	// events stuff
-	this._subs = {};
-	keypathPattern = new RegExp( '^' + this._pathDot.replace( '.', '\\.' ) );
-	pathDotLength = this._pathDot.length;
+	this.subs = {};
+	keypathPattern = new RegExp( '^' + this.pathDot.replace( '.', '\\.' ) );
+	pathDotLength = this.pathDot.length;
 
-	this._root.on( 'set', function ( keypath, value, options ) {
+	this.root.on( 'set', function ( keypath, value, options ) {
 		var localKeypath, k, unprefixed;
 
 		if ( typeof keypath === 'object' ) {
@@ -28,7 +28,7 @@ Subset = function( path, state ) {
 			return;
 		}
 
-		if ( keypath === this._path ) {
+		if ( keypath === this.path ) {
 			self.fire( 'reset' );
 			return;
 		}

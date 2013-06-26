@@ -91,7 +91,7 @@
 				try {
 					this.callback.call( this.context, value, this.value );
 				} catch ( err ) {
-					if ( statesman.debug ) {
+					if ( this.statesman.debug ) {
 						throw err;
 					}
 				}

@@ -1,5 +1,5 @@
-var propagateChanges = function ( statesman ) {
-	var i, changes, upstreamChanges, keypath, refs, map, computed;
+propagateChanges = function ( statesman ) {
+	var i, changes, upstreamChanges, keypath, computed;
 
 	changes = statesman.changes;
 	upstreamChanges = statesman.upstreamChanges;
@@ -20,19 +20,19 @@ var propagateChanges = function ( statesman ) {
 		propagateChange( statesman, keypath );
 	}
 
-	while ( statesman._deferred.length ) {
-		computed = statesman._deferred.pop();
+	while ( statesman.deferred.length ) {
+		computed = statesman.deferred.pop();
 		computed.update();
 		computed.deferred = false;
 	}
 };
 
 
-var propagateChange = function ( statesman, keypath, directOnly ) {
+propagateChange = function ( statesman, keypath, directOnly ) {
 
 	var refs, map, i;
 
-	refs = statesman._refs[ keypath ];
+	refs = statesman.refs[ keypath ];
 	if ( refs ) {
 		i = refs.length;
 		while ( i-- ) {
@@ -46,7 +46,7 @@ var propagateChange = function ( statesman, keypath, directOnly ) {
 		return;
 	}
 
-	map = statesman._refsMap[ keypath ];
+	map = statesman.refsMap[ keypath ];
 	if ( map ) {
 		i = map.length;
 		while ( i-- ) {

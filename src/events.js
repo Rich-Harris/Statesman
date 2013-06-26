@@ -20,11 +20,11 @@ events.on = function ( eventName, callback ) {
 		};
 	}
 
-	if ( !this._subs[ eventName ] ) {
-		this._subs[ eventName ] = [];
+	if ( !this.subs[ eventName ] ) {
+		this.subs[ eventName ] = [];
 	}
 
-	listeners = this._subs[ eventName ];
+	listeners = this.subs[ eventName ];
 	listeners[ listeners.length ] = callback;
 
 	return {
@@ -54,11 +54,11 @@ events.once = function ( eventName, callback ) {
 		};
 	}
 
-	if ( !this._subs[ eventName ] ) {
-		this._subs[ eventName ] = [];
+	if ( !this.subs[ eventName ] ) {
+		this.subs[ eventName ] = [];
 	}
 
-	listeners = this._subs[ eventName ];
+	listeners = this.subs[ eventName ];
 
 	suicidalCallback = function () {
 		callback.apply( self, arguments );
@@ -78,16 +78,16 @@ events.off = function ( eventName, callback ) {
 	var subscribers, index;
 
 	if ( !eventName ) {
-		this._subs = {};
+		this.subs = {};
 		return this;
 	}
 
 	if ( !callback ) {
-		delete this._subs[ eventName ];
+		delete this.subs[ eventName ];
 		return this;
 	}
 
-	subscribers = this._subs[ eventName ];
+	subscribers = this.subs[ eventName ];
 	if ( subscribers ) {
 		index = subscribers.indexOf( callback );
 
@@ -96,7 +96,7 @@ events.off = function ( eventName, callback ) {
 		}
 
 		if ( !subscribers.length ) {
-			delete this._subs[ eventName ];
+			delete this.subs[ eventName ];
 		}
 	}
 
@@ -106,7 +106,7 @@ events.off = function ( eventName, callback ) {
 events.fire = function ( eventName ) {
 	var subscribers, args, len, i;
 
-	subscribers = this._subs[ eventName ];
+	subscribers = this.subs[ eventName ];
 
 	if ( !subscribers ) {
 		return this;

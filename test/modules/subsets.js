@@ -290,8 +290,8 @@ modules[ modules.length ] = {
 				subset = state.subset( 'foo' );
 				subsetSubset = subset.subset( 'bar' );
 
-				equal( subsetSubset._root, state );
-				equal( subsetSubset._path, 'foo.bar' );
+				equal( subsetSubset.root, state );
+				equal( subsetSubset.path, 'foo.bar' );
 			}
 		}
 	]

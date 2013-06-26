@@ -1,4 +1,4 @@
-statesmanProto.reset = function ( data, options ) {
+statesmanProto.reset = function ( data ) {
 	this.data = {};
 	
 	// TODO to get proper change hash, should we just do a non-silent set?

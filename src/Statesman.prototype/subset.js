@@ -3,9 +3,9 @@ statesmanProto.subset = function ( path ) {
 		throw 'No subset path specified';
 	}
 
-	if ( !this._subsets[ path ] ) {
-		this._subsets[ path ] = new Subset( path, this );
+	if ( !this.subsets[ path ] ) {
+		this.subsets[ path ] = new Subset( path, this );
 	}
 
-	return this._subsets[ path ];
+	return this.subsets[ path ];
 };

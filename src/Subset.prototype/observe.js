@@ -1,7 +1,5 @@
 subsetProto.observe = function ( keypath, callback, options ) {
-	var args, k, map;
-
-	args = Array.prototype.slice.call( arguments );
+	var k, map;
 
 	// overload - observe multiple keypaths
 	if ( typeof keypath === 'object' ) {
@@ -9,7 +7,9 @@ subsetProto.observe = function ( keypath, callback, options ) {
 
 		map = {};
 		for ( k in keypath ) {
-			map[ this._pathDot + k ] = keypath[ k ];
+			if ( keypath.hasOwnProperty( k ) ) {
+				map[ this.pathDot + k ] = keypath[ k ];
+			}
 		}
 
 		if ( options ) {
@@ -18,22 +18,22 @@ subsetProto.observe = function ( keypath, callback, options ) {
 			options = { context: this };
 		}
 
-		return this._root.observe( map, options );
+		return this.root.observe( map, options );
 	}
 
 	// overload - omit keypath to observe root
 	if ( typeof keypath === 'function' ) {
 		options = callback;
 		callback = keypath;
-		keypath = this._path;
+		keypath = this.path;
 	}
 
 	else if ( keypath === '' ) {
-		keypath = this._path;
+		keypath = this.path;
 	}
 
 	else {
-		keypath = ( this._pathDot + keypath );
+		keypath = ( this.pathDot + keypath );
 	}
 
 	if ( options ) {
@@ -42,5 +42,5 @@ subsetProto.observe = function ( keypath, callback, options ) {
 		options = { context: this };
 	}
 
-	return this._root.observe( keypath, callback, options );
+	return this.root.observe( keypath, callback, options );
 };
