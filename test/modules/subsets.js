@@ -293,6 +293,33 @@ modules[ modules.length ] = {
 				equal( subsetSubset.root, state );
 				equal( subsetSubset.path, 'foo.bar' );
 			}
+		},
+
+		{
+			title: 'Subset observers are called with the subset as context (by default)',
+			test: function () {
+				var state, subset, bar;
+
+				state = new Statesman({
+					foo: {
+						bar: 'baz'
+					}
+				});
+
+				subset = state.subset( 'foo' );
+
+				subset.observe( 'bar', function ( value ) {
+					bar = value;
+				});
+
+				equal( bar, 'baz' );
+
+				state.set( 'foo.bar', 'ben' );
+				equal( bar, 'ben' );
+
+				subset.set( 'bar', 'baz' );
+				equal( bar, 'baz' );
+			}
 		}
 	]
 };

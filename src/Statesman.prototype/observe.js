@@ -37,6 +37,8 @@
 			throw new Error( 'Bad arguments to Statesman.prototype.observe()' );
 		}
 
+		options = callback;
+
 		observers = [];
 		for ( k in keypath ) {
 			if ( keypath.hasOwnProperty( k ) ) {
