@@ -16,6 +16,7 @@ var Statesman,
 
 	// helper functions
 	isEqual,
+	isNumeric,
 	normalise,
 	augment,
 
