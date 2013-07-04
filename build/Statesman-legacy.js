@@ -1,5 +1,5 @@
-/*! Statesman - v0.2.0 - 2013-06-26
-* State management made straightforward
+/*! Statesman - v0.2.0 - 2013-07-04
+* The JavaScript state management library
 
 * 
 * Copyright (c) 2013 Rich Harris; MIT Licensed */
@@ -24,6 +24,7 @@ var Statesman,
 
 	// helper functions
 	isEqual,
+	isNumeric,
 	normalise,
 	augment,
 
@@ -174,6 +175,17 @@ Statesman = function ( data ) {
 		changeHash: { value: null, writable: true }
 	});
 };
+statesmanProto.add = function ( keypath, d ) {
+	var value = this.get( keypath );
+
+	if ( d === undefined ) {
+		d = 1;
+	}
+
+	if ( isNumeric( value ) && isNumeric( d ) ) {
+		this.set( keypath, +value + ( d === undefined ? 1 : +d ) );
+	}
+};
 (function ( statesmanProto ) {
 
 	var Computed, Reference, validate, emptyArray;
@@ -234,13 +246,17 @@ Statesman = function ( data ) {
 
 		i = signature.dependsOn.length;
 		
-		// if we only have one dependency, we can update whenever it changes
-		if ( i === 1 ) {
-			this.selfUpdating = true;
-		}
+		// if this is a cacheable computed, we update proactively
+		if ( this.cache ) {
+			
+			// if we only have one dependency, we can update whenever it changes
+			if ( i === 1 ) {
+				this.selfUpdating = true;
+			}
 
-		while ( i-- ) {
-			this.refs[i] = new Reference( this, signature.dependsOn[i] );
+			while ( i-- ) {
+				this.refs[i] = new Reference( this, signature.dependsOn[i] );
+			}
 		}
 
 		this.setting = true;
@@ -286,13 +302,26 @@ Statesman = function ( data ) {
 
 				else {
 					args = [];
-					i = this.refs.length;
-					
-					while ( i-- ) {
-						args[i] = this.refs[i].value;
-					}
 
-					value = this.signature.get.apply( this.context, args );
+					if ( this.cache ) {
+						i = this.refs.length;
+						
+						while ( i-- ) {
+							args[i] = this.refs[i].value;
+						}
+
+						value = this.signature.get.apply( this.context, args );
+					}
+					
+					else {
+						i = this.signature.dependsOn.length;
+						
+						while ( i-- ) {
+							args[i] = this.statesman.get( this.signature.dependsOn[i] );
+						}
+
+						value = this.signature.get.apply( this.context, args );
+					}
 				}
 			}
 
@@ -490,6 +519,8 @@ var get = function ( statesman, keypath, keys, forceCache ) {
 		if ( typeof keypath !== 'object' ) {
 			throw new Error( 'Bad arguments to Statesman.prototype.observe()' );
 		}
+
+		options = callback;
 
 		observers = [];
 		for ( k in keypath ) {
@@ -736,6 +767,20 @@ statesmanProto.subset = function ( path ) {
 
 	return this.subsets[ path ];
 };
+statesmanProto.subtract = function ( keypath, d ) {
+	var value = this.get( keypath );
+
+	if ( d === undefined ) {
+		d = 1;
+	}
+
+	if ( isNumeric( value ) && isNumeric( d ) ) {
+		this.set( keypath, +value - ( d === undefined ? 1 : +d ) );
+	}
+};
+statesmanProto.toggle = function ( keypath ) {
+	this.set( keypath, !this.get( keypath ) );
+};
 clearCache = function ( statesman, keypath ) {
 	var children = statesman.cacheMap[ keypath ];
 
@@ -749,6 +794,10 @@ clearCache = function ( statesman, keypath ) {
 	while ( children.length ) {
 		clearCache( statesman, children.pop() );
 	}
+};
+// http://stackoverflow.com/questions/18082/validate-numbers-in-javascript-isnumeric
+isNumeric = function ( n ) {
+	return !isNaN( parseFloat( n ) ) && isFinite( n );
 };
 notifyObservers = function ( statesman, keypath, directOnly ) {
 
@@ -836,7 +885,7 @@ propagateChange = function ( statesman, keypath, directOnly ) {
 	if ( map ) {
 		i = map.length;
 		while ( i-- ) {
-			propagateChange( map[i] );
+			propagateChange( statesman, map[i] );
 		}
 	}
 };
@@ -933,34 +982,27 @@ Subset = function( path, state ) {
 	keypathPattern = new RegExp( '^' + this.pathDot.replace( '.', '\\.' ) );
 	pathDotLength = this.pathDot.length;
 
-	this.root.on( 'set', function ( keypath, value, options ) {
-		var localKeypath, k, unprefixed;
+	this.root.on( 'change', function ( changeHash ) {
+		var localKeypath, keypath, unprefixed, changed;
 
-		if ( typeof keypath === 'object' ) {
-			options = value;
-			unprefixed = {};
+		unprefixed = {};
 
-			for ( k in keypath ) {
-				if ( keypath.hasOwnProperty( k ) && keypathPattern.test( k ) ) {
-					localKeypath = k.substring( pathDotLength );
-					unprefixed[ localKeypath ] = keypath[k];
-				}
+		for ( keypath in changeHash ) {
+			if ( changeHash.hasOwnProperty( keypath ) && keypathPattern.test( keypath ) ) {
+				localKeypath = keypath.substring( pathDotLength );
+				unprefixed[ localKeypath ] = changeHash[ keypath ];
+
+				changed = true;
 			}
-
-			self.fire( 'set', unprefixed, options );
-			return;
 		}
 
-		if ( keypath === this.path ) {
-			self.fire( 'reset' );
-			return;
-		}
-
-		if ( keypathPattern.test( keypath ) ) {
-			localKeypath = keypath.substring( pathDotLength );
-			self.fire( 'set', localKeypath, value, options );
+		if ( changed ) {
+			self.fire( 'change', unprefixed );
 		}
 	});
+};
+subsetProto.add = function ( keypath, d ) {
+	this.root.add( this.pathDot + keypath, d );
 };
 (function ( subsetProto ) {
 
@@ -1102,6 +1144,12 @@ subsetProto.set = function ( keypath, value, options ) {
 };
 subsetProto.subset = function ( keypath ) {
 	return this.root.subset( this.pathDot + keypath );
+};
+subsetProto.subtract = function ( keypath, d ) {
+	this.root.subtract( this.pathDot + keypath, d );
+};
+subsetProto.toggle = function ( keypath ) {
+	this.root.toggle( this.pathDot + keypath );
 };
 events = {};
 
