@@ -50,7 +50,7 @@ propagateChange = function ( statesman, keypath, directOnly ) {
 	if ( map ) {
 		i = map.length;
 		while ( i-- ) {
-			propagateChange( map[i] );
+			propagateChange( statesman, map[i] );
 		}
 	}
 };
