@@ -13,3 +13,7 @@ Changelog
 * 0.2.0
     * Complete rewrite!
     * Events
+* 0.2.1
+    * Asynchronous state propagation
+    * Better change events
+    * Convenience methods - add, subtract, toggle
