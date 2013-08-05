@@ -1,6 +1,6 @@
 (function ( statesmanProto ) {
 
-	var Computed, Reference, validate, emptyArray;
+	var Computed, Reference, validate, emptyArray, asyncPattern;
 
 	statesmanProto.compute = function ( keypath, signature ) {
 		var result, k, computed;
@@ -53,6 +53,8 @@
 
 		this.signature = signature;
 		this.cache = signature.cache;
+		this.async = signature.async;
+		this.context = signature.context || statesman;
 
 		this.refs = [];
 
@@ -60,7 +62,7 @@
 		
 		// if this is a cacheable computed, we update proactively
 		if ( this.cache ) {
-			
+
 			// if we only have one dependency, we can update whenever it changes
 			if ( i === 1 ) {
 				this.selfUpdating = true;
@@ -105,7 +107,9 @@
 		},
 
 		getter: function () {
-			var i, args, value;
+			var self = this, i, args, value, statesman, oldAsync, getterFired;
+
+			statesman = this.statesman;
 
 			try {
 				if ( this.signature.compiled ) {
@@ -114,6 +118,26 @@
 
 				else {
 					args = [];
+
+					if ( this.async ) {
+						oldAsync = this.context.async;
+
+						this.context.async = function () {
+							return function ( result ) {
+								if ( !getterFired ) {
+									// this returned synchronously
+									wasSynchronous = true;
+									synchronousResult = result;
+								}
+
+								else {
+									self.setting = true;
+									statesman.set( self.keypath, result );
+									self.setting = false;
+								}
+							};
+						};
+					}
 
 					if ( this.cache ) {
 						i = this.refs.length;
@@ -129,16 +153,32 @@
 						i = this.signature.dependsOn.length;
 						
 						while ( i-- ) {
-							args[i] = this.statesman.get( this.signature.dependsOn[i] );
+							args[i] = statesman.get( this.signature.dependsOn[i] );
 						}
 
 						value = this.signature.get.apply( this.context, args );
+					}
+
+					getterFired = true;
+
+					if ( this.async ) {
+						this.context.async = oldAsync;
+
+						if ( wasSynchronous ) {
+							value = synchronousResult;
+						}
+						
+						// respect returned values, which may be placeholders, but if nothing
+						// is returned then return the previous value
+						else if ( value === undefined ) {
+							value = this.value;
+						}
 					}
 				}
 			}
 
 			catch ( err ) {
-				if ( this.statesman.debug ) {
+				if ( statesman.debug ) {
 					throw err;
 				}
 
@@ -211,6 +251,7 @@
 
 
 	emptyArray = []; // no need to create this more than once!
+	asyncPattern = /async/;
 
 	validate = function ( keypath, signature, debug ) {
 
@@ -239,6 +280,10 @@
 
 			if ( signature.cache !== false ) {
 				signature.cache = true;
+			}
+
+			if ( signature.get && asyncPattern.test( signature.get ) ) {
+				signature.async = true; 
 			}
 		}
 		
