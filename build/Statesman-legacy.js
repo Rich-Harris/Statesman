@@ -1,4 +1,4 @@
-/*! Statesman - v0.2.0 - 2013-07-04
+/*! Statesman - v0.2.1 - 2013-08-05
 * The JavaScript state management library
 
 * 
@@ -105,42 +105,6 @@ try {
 	}
 	
 }());
-(function () {
-
-	var varPattern = /\$\{\s*([a-zA-Z0-9_$\[\]\.]+)\s*\}/g;
-
-	compile = function ( str, context, prefix ) {
-		var compiled, triggers, expanded, fn, getter;
-
-		prefix = prefix || '';
-		triggers = [];
-
-		expanded = str.replace( varPattern, function ( match, keypath ) {
-			// make a note of which triggers are referenced, but de-dupe first
-			if ( triggers.indexOf( keypath ) === -1 ) {
-				triggers[ triggers.length ] = prefix + keypath;
-			}
-
-			return 'm.get("' + keypath + '")';
-		});
-
-		fn = new Function( 'utils', 'var m=this;try{return ' + expanded + '}catch(e){return undefined}' );
-
-		if ( fn.bind ) {
-			getter = fn.bind( context, Statesman.utils );
-		} else {
-			getter = function () {
-				return fn.call( context, Statesman.utils );
-			};
-		}
-
-		return {
-			getter: getter,
-			triggers: triggers
-		};
-	};
-
-}());
 Statesman = function ( data ) {
 	defineProperties( this, {
 		data: { value: data || {}, writable: true },
@@ -188,7 +152,7 @@ statesmanProto.add = function ( keypath, d ) {
 };
 (function ( statesmanProto ) {
 
-	var Computed, Reference, validate, emptyArray;
+	var Computed, Reference, validate, emptyArray, asyncPattern;
 
 	statesmanProto.compute = function ( keypath, signature ) {
 		var result, k, computed;
@@ -241,6 +205,8 @@ statesmanProto.add = function ( keypath, d ) {
 
 		this.signature = signature;
 		this.cache = signature.cache;
+		this.async = signature.async;
+		this.context = signature.context || statesman;
 
 		this.refs = [];
 
@@ -248,7 +214,7 @@ statesmanProto.add = function ( keypath, d ) {
 		
 		// if this is a cacheable computed, we update proactively
 		if ( this.cache ) {
-			
+
 			// if we only have one dependency, we can update whenever it changes
 			if ( i === 1 ) {
 				this.selfUpdating = true;
@@ -293,7 +259,9 @@ statesmanProto.add = function ( keypath, d ) {
 		},
 
 		getter: function () {
-			var i, args, value;
+			var self = this, i, args, value, statesman, oldAsync, getterFired;
+
+			statesman = this.statesman;
 
 			try {
 				if ( this.signature.compiled ) {
@@ -302,6 +270,26 @@ statesmanProto.add = function ( keypath, d ) {
 
 				else {
 					args = [];
+
+					if ( this.async ) {
+						oldAsync = this.context.async;
+
+						this.context.async = function () {
+							return function ( result ) {
+								if ( !getterFired ) {
+									// this returned synchronously
+									wasSynchronous = true;
+									synchronousResult = result;
+								}
+
+								else {
+									self.setting = true;
+									statesman.set( self.keypath, result );
+									self.setting = false;
+								}
+							};
+						};
+					}
 
 					if ( this.cache ) {
 						i = this.refs.length;
@@ -317,16 +305,32 @@ statesmanProto.add = function ( keypath, d ) {
 						i = this.signature.dependsOn.length;
 						
 						while ( i-- ) {
-							args[i] = this.statesman.get( this.signature.dependsOn[i] );
+							args[i] = statesman.get( this.signature.dependsOn[i] );
 						}
 
 						value = this.signature.get.apply( this.context, args );
+					}
+
+					getterFired = true;
+
+					if ( this.async ) {
+						this.context.async = oldAsync;
+
+						if ( wasSynchronous ) {
+							value = synchronousResult;
+						}
+						
+						// respect returned values, which may be placeholders, but if nothing
+						// is returned then return the previous value
+						else if ( value === undefined ) {
+							value = this.value;
+						}
 					}
 				}
 			}
 
 			catch ( err ) {
-				if ( this.statesman.debug ) {
+				if ( statesman.debug ) {
 					throw err;
 				}
 
@@ -399,6 +403,7 @@ statesmanProto.add = function ( keypath, d ) {
 
 
 	emptyArray = []; // no need to create this more than once!
+	asyncPattern = /async/;
 
 	validate = function ( keypath, signature, debug ) {
 
@@ -427,6 +432,10 @@ statesmanProto.add = function ( keypath, d ) {
 
 			if ( signature.cache !== false ) {
 				signature.cache = true;
+			}
+
+			if ( signature.get && asyncPattern.test( signature.get ) ) {
+				signature.async = true; 
 			}
 		}
 		
