@@ -3,7 +3,7 @@ statesmanProto.get = statesmanProto.toJSON = function ( keypath ) {
 	return get( this, keypath && normalise( keypath ) );
 };
 
-var get = function ( statesman, keypath, keys, forceCache ) {
+get = function ( statesman, keypath, keys, forceCache ) {
 	var computed, lastKey, parentKeypath, parentValue, value;
 
 	if ( !keypath ) {

@@ -8,15 +8,12 @@
 		inheritFromParent,
 		wrapMethod,
 		inheritFromChildProps,
-		conditionallyParseTemplate,
-		extractInlinePartials,
-		conditionallyParsePartials,
 		initChildInstance,
 
 		extendable,
-		inheritable,
 		blacklist;
 
+	// this looks odd, but we'll be added other properties in future - validators etc
 	extendable = [ 'data', 'computed' ];
 	blacklist = extendable;
 
@@ -116,8 +113,6 @@
 	
 
 	initChildInstance = function ( child, Child, data ) {
-		var protoData, data, id;
-
 		if ( Child.data ) {
 			data = augment( clone( Child.data ), data );
 		}

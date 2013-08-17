@@ -107,7 +107,15 @@
 		},
 
 		getter: function () {
-			var self = this, i, args, value, statesman, oldAsync, getterFired;
+			var self = this,
+				i,
+				args,
+				value,
+				statesman,
+				wasSynchronous,
+				oldAsync,
+				synchronousResult,
+				getterFired;
 
 			statesman = this.statesman;
 
