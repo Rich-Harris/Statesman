@@ -1,4 +1,4 @@
-/*! Statesman - v0.2.1 - 2013-08-05
+/*! Statesman - v0.2.1 - 2013-08-17
 * The JavaScript state management library
 
 * 
@@ -19,6 +19,7 @@ var Statesman,
 	events,
 
 	// static methods and properties,
+	extend,
 	compile,
 	utils,
 
@@ -41,6 +42,7 @@ var Statesman,
 
 	defineProperty,
 	defineProperties,
+	hasOwn = Object.prototype.hasOwnProperty,
 
 	// internal caches
 	normalisedKeypathCache = {};
@@ -69,12 +71,205 @@ try {
 		var prop;
 
 		for ( prop in props ) {
-			if ( props.hasOwnProperty( prop ) ) {
+			if ( hasOwn.call( props, prop ) ) {
 				defineProperty( obj, prop, props[ prop ] );
 			}
 		}
 	};
 }
+(function () {
+
+	var fillGaps,
+		clone,
+		augment,
+		create,
+
+		inheritFromParent,
+		wrapMethod,
+		inheritFromChildProps,
+		conditionallyParseTemplate,
+		extractInlinePartials,
+		conditionallyParsePartials,
+		initChildInstance,
+
+		extendable,
+		inheritable,
+		blacklist;
+
+	extendable = [ 'data', 'computed' ];
+	blacklist = extendable;
+
+
+	extend = function ( childProps ) {
+		var Parent = this, Child;
+
+		if ( !childProps ) {
+			childProps = {};
+		}
+
+		// create Child constructor
+		Child = function ( data ) {
+			initChildInstance( this, Child, data || {});
+		};
+
+		Child.prototype = create( Parent.prototype );
+
+		// inherit options from parent, if we're extending a subclass
+		if ( Parent !== Statesman ) {
+			inheritFromParent( Child, Parent );
+		}
+
+		// apply childProps
+		inheritFromChildProps( Child, childProps );
+		
+		Child.extend = extend;
+
+		return Child;
+	};
+
+	inheritFromParent = function ( Child, Parent ) {
+		extendable.forEach( function ( property ) {
+			if ( Parent[ property ] ) {
+				Child[ property ] = clone( Parent[ property ] );
+			}
+		});
+	};
+
+	wrapMethod = function ( method, superMethod ) {
+		if ( /_super/.test( method ) ) {
+			return function () {
+				var _super = this._super, result;
+				this._super = superMethod;
+
+				result = method.apply( this, arguments );
+
+				this._super = _super;
+				return result;
+			};
+		}
+
+		else {
+			return method;
+		}
+	};
+
+	inheritFromChildProps = function ( Child, childProps ) {
+		var key, member;
+
+		extendable.forEach( function ( property ) {
+			var value = childProps[ property ];
+
+			if ( value ) {
+				if ( Child[ property ] ) {
+					augment( Child[ property ], value );
+				}
+
+				else {
+					Child[ property ] = value;
+				}
+			}
+		});
+
+		/*inheritable.forEach( function ( property ) {
+			if ( childProps[ property ] !== undefined ) {
+				Child[ property ] = childProps[ property ];
+			}
+		});*/
+
+		// Blacklisted properties don't extend the child, as they are part of the initialisation options
+		for ( key in childProps ) {
+			if ( hasOwn.call( childProps, key ) && !hasOwn.call( Child.prototype, key ) && blacklist.indexOf( key ) === -1 ) {
+				member = childProps[ key ];
+
+				// if this is a method that overwrites a prototype method, we may need
+				// to wrap it
+				if ( typeof member === 'function' && typeof Child.prototype[ key ] === 'function' ) {
+					Child.prototype[ key ] = wrapMethod( member, Child.prototype[ key ] );
+				} else {
+					Child.prototype[ key ] = member;
+				}
+			}
+		}
+	};
+
+	
+
+	initChildInstance = function ( child, Child, data ) {
+		var protoData, data, id;
+
+		if ( Child.data ) {
+			data = augment( clone( Child.data ), data );
+		}
+
+		Statesman.call( child, data );
+
+		if ( Child.computed ) {
+			child.compute( Child.computed );
+		}
+
+		if ( child.init ) {
+			child.init.call( child, data );
+		}
+	};
+
+	fillGaps = function ( target, source ) {
+		var key;
+
+		for ( key in source ) {
+			if ( hasOwn.call( source, key ) && !hasOwn.call( target, key ) ) {
+				target[ key ] = source[ key ];
+			}
+		}
+	};
+
+	clone = function ( source ) {
+		var target = {}, key;
+
+		for ( key in source ) {
+			if ( hasOwn.call( source, key ) ) {
+				target[ key ] = source[ key ];
+			}
+		}
+
+		return target;
+	};
+
+	augment = function ( target, source ) {
+		var key;
+
+		for ( key in source ) {
+			if ( hasOwn.call( source, key ) ) {
+				target[ key ] = source[ key ];
+			}
+		}
+
+		return target;
+	};
+
+	try {
+		Object.create( null );
+		create = Object.create;
+	} catch ( err ) {
+		// sigh
+		create = (function () {
+			var F = function () {};
+
+			return function ( proto, props ) {
+				var obj;
+
+				F.prototype = proto;
+				obj = new F();
+
+				if ( props ) {
+					Object.defineProperties( obj, props );
+				}
+
+				return obj;
+			};
+		}());
+	}
+
+}());
 Statesman = function ( data ) {
 	defineProperties( this, {
 		data: { value: data || {}, writable: true },
@@ -418,7 +613,8 @@ statesmanProto.add = function ( keypath, d ) {
 	};
 
 }( statesmanProto ));
-statesmanProto.get = function ( keypath ) {
+// aliasing .get() as .toJSON() means we can do JSON.stringify( statesman )
+statesmanProto.get = statesmanProto.toJSON = function ( keypath ) {
 	return get( this, keypath && normalise( keypath ) );
 };
 
@@ -468,9 +664,6 @@ var get = function ( statesman, keypath, keys, forceCache ) {
 		
 		var observer, observers, k, i, init;
 
-		// by default, initialise observers
-		init = ( !options || options.init !== false );
-
 		// overload - allow observe to be called with no keypath (i.e. observe root)
 		if ( typeof keypath === 'function' ) {
 			options = callback;
@@ -478,6 +671,9 @@ var get = function ( statesman, keypath, keys, forceCache ) {
 
 			keypath = '';
 		}
+
+		// by default, initialise observers
+		init = ( !options || options.init !== false );
 
 		if ( typeof keypath === 'string' ) {
 			observer = new Observer( this, keypath, callback, options );
@@ -529,6 +725,33 @@ var get = function ( statesman, keypath, keys, forceCache ) {
 		};
 	};
 
+	statesmanProto.unobserve = function ( keypath ) {
+		var deps, i;
+
+		keypath = ( keypath === undefined ? '' : normalise( keypath ) );
+
+		deps = this.deps[ keypath ];
+
+		if ( !deps ) {
+			return;
+		}
+
+		i = deps.length;
+		while ( i-- ) {
+			if ( deps[i] instanceof Observer ) {
+				deps[i].teardown();
+			}
+		}
+	};
+
+	statesmanProto.unobserveAll = function () {
+		var keypath;
+
+		for ( keypath in this.deps ) {
+			this.unobserve( keypath );
+		}
+	};
+
 
 	Observer = function ( statesman, keypath, callback, options ) {
 		this.statesman = statesman;
@@ -539,8 +762,6 @@ var get = function ( statesman, keypath, keys, forceCache ) {
 		this.context = ( options && options.context ? options.context : statesman );
 
 		registerDependant( this );
-
-
 	};
 
 	Observer.prototype = {
@@ -1328,6 +1549,7 @@ Subset.prototype = subsetProto;
 
 // attach static properties
 Statesman.utils = utils;
+Statesman.extend = extend;
 
 
 // export as CommonJS
