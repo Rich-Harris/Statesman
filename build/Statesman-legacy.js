@@ -13,6 +13,8 @@
 var Statesman,
 	Subset,
 
+	VERSION = '0.2.1',
+
 	statesmanProto = {},
 	subsetProto = {},
 
@@ -117,15 +119,12 @@ try {
 		inheritFromParent,
 		wrapMethod,
 		inheritFromChildProps,
-		conditionallyParseTemplate,
-		extractInlinePartials,
-		conditionallyParsePartials,
 		initChildInstance,
 
 		extendable,
-		inheritable,
 		blacklist;
 
+	// this looks odd, but we'll be added other properties in future - validators etc
 	extendable = [ 'data', 'computed' ];
 	blacklist = extendable;
 
@@ -225,8 +224,6 @@ try {
 	
 
 	initChildInstance = function ( child, Child, data ) {
-		var protoData, data, id;
-
 		if ( Child.data ) {
 			data = augment( clone( Child.data ), data );
 		}
@@ -454,7 +451,15 @@ statesmanProto.add = function ( keypath, d ) {
 		},
 
 		getter: function () {
-			var self = this, i, args, value, statesman, oldAsync, getterFired;
+			var self = this,
+				i,
+				args,
+				value,
+				statesman,
+				wasSynchronous,
+				oldAsync,
+				synchronousResult,
+				getterFired;
 
 			statesman = this.statesman;
 
@@ -648,7 +653,7 @@ statesmanProto.get = statesmanProto.toJSON = function ( keypath ) {
 	return get( this, keypath && normalise( keypath ) );
 };
 
-var get = function ( statesman, keypath, keys, forceCache ) {
+get = function ( statesman, keypath, keys, forceCache ) {
 	var computed, lastKey, parentKeypath, parentValue, value;
 
 	if ( !keypath ) {
@@ -1580,6 +1585,8 @@ Subset.prototype = subsetProto;
 // attach static properties
 Statesman.utils = utils;
 Statesman.extend = extend;
+
+Statesman.VERSION = VERSION;
 
 
 // export as CommonJS
