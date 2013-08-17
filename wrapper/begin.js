@@ -5,6 +5,8 @@
 var Statesman,
 	Subset,
 
+	VERSION = '<%= version %>',
+
 	statesmanProto = {},
 	subsetProto = {},
 

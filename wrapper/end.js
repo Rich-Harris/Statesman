@@ -9,6 +9,8 @@ Subset.prototype = subsetProto;
 Statesman.utils = utils;
 Statesman.extend = extend;
 
+Statesman.VERSION = VERSION;
+
 
 // export as CommonJS
 if ( typeof module !== "undefined" && module.exports ) {
