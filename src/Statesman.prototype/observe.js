@@ -6,9 +6,6 @@
 		
 		var observer, observers, k, i, init;
 
-		// by default, initialise observers
-		init = ( !options || options.init !== false );
-
 		// overload - allow observe to be called with no keypath (i.e. observe root)
 		if ( typeof keypath === 'function' ) {
 			options = callback;
@@ -16,6 +13,9 @@
 
 			keypath = '';
 		}
+
+		// by default, initialise observers
+		init = ( !options || options.init !== false );
 
 		if ( typeof keypath === 'string' ) {
 			observer = new Observer( this, keypath, callback, options );
@@ -67,6 +67,33 @@
 		};
 	};
 
+	statesmanProto.unobserve = function ( keypath ) {
+		var deps, i;
+
+		keypath = ( keypath === undefined ? '' : normalise( keypath ) );
+
+		deps = this.deps[ keypath ];
+
+		if ( !deps ) {
+			return;
+		}
+
+		i = deps.length;
+		while ( i-- ) {
+			if ( deps[i] instanceof Observer ) {
+				deps[i].teardown();
+			}
+		}
+	};
+
+	statesmanProto.unobserveAll = function () {
+		var keypath;
+
+		for ( keypath in this.deps ) {
+			this.unobserve( keypath );
+		}
+	};
+
 
 	Observer = function ( statesman, keypath, callback, options ) {
 		this.statesman = statesman;
@@ -77,8 +104,6 @@
 		this.context = ( options && options.context ? options.context : statesman );
 
 		registerDependant( this );
-
-
 	};
 
 	Observer.prototype = {
