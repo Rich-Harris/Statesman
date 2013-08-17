@@ -1,4 +1,5 @@
-statesmanProto.get = function ( keypath ) {
+// aliasing .get() as .toJSON() means we can do JSON.stringify( statesman )
+statesmanProto.get = statesmanProto.toJSON = function ( keypath ) {
 	return get( this, keypath && normalise( keypath ) );
 };
 
