@@ -7,6 +7,12 @@
 	"noarg": true,
 	"sub": true,
 	"undef": true,
+	"unused": true,
 	"boss": true,
-	"eqnull": true
+	"eqnull": true,
+	"evil": true,
+	"globals": {
+		"module": true,
+		"define": true
+	}
 }

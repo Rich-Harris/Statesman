@@ -23,51 +23,70 @@ module.exports = function(grunt) {
 			}
 		},
 
-		jshint: {
-			options: {
-				jshintrc: '.jshintrc'
-			},
-			files: [ 'Gruntfile.js', 'build/Statesman.js' ]
-		},
 		qunit: {
 			all: [ 'test/index.html' ]
 		},
 		concat: {
 			options: {
-				banner: '<%= meta.banner %>'
+				banner: '<%= meta.banner %>',
+				process: {
+					data: { version: '<%= pkg.version %>' }
+				}
 			},
 			build: {
 				src: [ 'wrapper/begin.js', 'src/**/*.js', 'wrapper/end.js' ],
-				dest: 'build/Statesman.js'
+				dest: 'tmp/Statesman.js'
 			},
 			legacy: {
 				src: [ 'wrapper/begin.js', 'legacy.js', 'src/**/*.js', 'wrapper/end.js' ],
-				dest: 'build/Statesman-legacy.js'
+				dest: 'tmp/Statesman-legacy.js'
 			}
+		},
+		jshint: {
+			options: {
+				jshintrc: '.jshintrc'
+			},
+			files: [ 'tmp/Statesman.js' ]
 		},
 		uglify: {
 			build: {
-				src: [ 'build/Statesman.js' ],
-				dest: 'build/Statesman.min.js'
+				src: [ 'tmp/Statesman.js' ],
+				dest: 'tmp/Statesman.min.js'
 			},
 			legacy: {
-				src: [ 'build/Statesman-legacy.js' ],
-				dest: 'build/Statesman-legacy.min.js'
+				src: [ 'tmp/Statesman-legacy.js' ],
+				dest: 'tmp/Statesman-legacy.min.js'
 			}
 		},
 		copy: {
+			build: {
+				files: [{
+					cwd: 'tmp',
+					expand: true,
+					src: '**',
+					dest: 'build/'
+				}]
+			},
 			release: {
-				files: {
-					'release/<%= pkg.version %>/Statesman.js': '<%= concat.build.dest %>',
-					'release/<%= pkg.version %>/Statesman.min.js': '<%= uglify.build.dest %>'
-				}
+				files: [{
+					cwd: 'build',
+					expand: true,
+					src: '**',
+					dest: 'release/<%= pkg.version %>/'
+				}]
 			},
 			shortcut: {
-				files: {
-					'Statesman.js': '<%= concat.build.dest %>',
-					'Statesman.min.js': '<%= uglify.build.dest %>'
-				}
+				files: [{
+					cwd: 'build',
+					expand: true,
+					src: '**',
+					dest: ''
+				}]
 			}
+		},
+		clean: {
+			tmp: [ 'tmp' ],
+			build: [ 'build' ]
 		}
 	});
 
@@ -78,9 +97,21 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks( 'grunt-contrib-concat' );
 	grunt.loadNpmTasks( 'grunt-contrib-uglify' );
 	grunt.loadNpmTasks( 'grunt-contrib-copy' );
+	grunt.loadNpmTasks( 'grunt-contrib-clean' );
 
-	// default task
-	grunt.registerTask( 'default', [ 'concat', 'uglify', 'qunit' ] );
-	grunt.registerTask( 'release', [ 'default', 'copy' ] );
+	// build task
+	grunt.registerTask( 'build', [
+		'clean:tmp',
+		'concat',
+		'jshint',
+		'uglify',
+		'qunit',
+		'clean:build',
+		'copy:build'
+	]);
+	
+	grunt.registerTask( 'release', [ 'build', 'copy:release', 'copy:shortcut' ] );
+
+	grunt.registerTask( 'default', [ 'build' ] );
 
 };
