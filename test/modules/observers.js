@@ -237,6 +237,115 @@ modules[ modules.length ] = {
 				equal( currentFoo, 'baz' );
 				equal( currentBar, 'boo' );
 			}
+		},
+
+		{
+			title: 'Observers can be cancelled with state.unobserve( keypath )',
+			test: function () {
+				var state, observer, triggered = 0;
+
+				state = new Statesman({
+					foo: 'bar'
+				});
+
+				observer = state.observe( 'foo', function () {
+					triggered += 1;
+				}, { init: false });
+
+				state.set( 'foo', 'baz' );
+				equal( triggered, 1 );
+
+				state.unobserve( 'foo' );
+
+				state.set( 'foo', 'bar' );
+				equal( triggered, 1 );
+			}
+		},
+
+		{
+			title: 'state.unobserve() with no keypath cancels root observers',
+			test: function () {
+				var state, observer, triggered = 0;
+
+				state = new Statesman({
+					foo: 'bar'
+				});
+
+				observer = state.observe( function () {
+					triggered += 1;
+				}, { init: false });
+
+				equal( triggered, 0 );
+
+				state.set( 'foo', 'baz' );
+				equal( triggered, 1 );
+
+				state.unobserve();
+
+				state.set( 'foo', 'bar' );
+				equal( triggered, 1 );
+			}
+		},
+
+		{
+			title: 'state.unobserveAll() removes all observers',
+			test: function () {
+				var state, observer1, observer2, triggered = 0;
+
+				state = new Statesman({
+					foo: 'bar'
+				});
+
+				observer1 = state.observe( 'foo', function () {
+					triggered += 1;
+				}, { init: false });
+
+				observer2 = state.observe( function () {
+					triggered += 1;
+				}, { init: false });
+
+				equal( triggered, 0 );
+
+				state.set( 'foo', 'baz' );
+				equal( triggered, 2 );
+
+				state.unobserveAll();
+
+				state.set( 'foo', 'bar' );
+				equal( triggered, 2 );
+			}
+		},
+
+		{
+			title: 'Keypaths passed to state.unobserve are normalised',
+			test: function () {
+				var state, observer1, observer2, triggered = 0;
+
+				state = new Statesman({
+					array: [ 1, 2, 3 ]
+				});
+
+				observer1 = state.observe( 'array[0]', function () {
+					triggered += 1;
+				}, { init: false });
+
+				observer2 = state.observe( 'array[1]', function () {
+					triggered += 1;
+				}, { init: false });
+
+				equal( triggered, 0 );
+
+				state.set( 'array[0]', 4 );
+				state.set( 'array.1', 5 );
+				equal( triggered, 2 );
+
+				state.unobserve( 'array[0]' );
+				state.unobserve( 'array.1' );
+
+				state.set( 'array[0]', 5 );
+				state.set( 'array.1', 6 );
+				equal( triggered, 2 );
+			}
 		}
 	]
 };
