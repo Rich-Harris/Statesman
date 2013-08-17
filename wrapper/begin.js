@@ -11,6 +11,7 @@ var Statesman,
 	events,
 
 	// static methods and properties,
+	extend,
 	compile,
 	utils,
 
@@ -33,6 +34,7 @@ var Statesman,
 
 	defineProperty,
 	defineProperties,
+	hasOwn = Object.prototype.hasOwnProperty,
 
 	// internal caches
 	normalisedKeypathCache = {};
@@ -61,7 +63,7 @@ try {
 		var prop;
 
 		for ( prop in props ) {
-			if ( props.hasOwnProperty( prop ) ) {
+			if ( hasOwn.call( props, prop ) ) {
 				defineProperty( obj, prop, props[ prop ] );
 			}
 		}

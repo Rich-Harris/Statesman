@@ -7,6 +7,7 @@ Subset.prototype = subsetProto;
 
 // attach static properties
 Statesman.utils = utils;
+Statesman.extend = extend;
 
 
 // export as CommonJS
