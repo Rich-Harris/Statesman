@@ -17,9 +17,12 @@ module.exports = function(grunt) {
 
 		watch: {
 			js: {
-				files: [ 'src/**/*.js' ],
-				tasks: 'concat',
-				interrupt: true
+				files: [ 'src/**/*.js', 'wrapper/**/*.js' ],
+				tasks: [ 'clean:tmp', 'concat', 'jshint' ],
+				interrupt: true,
+				options: {
+					force: true
+				}
 			}
 		},
 
