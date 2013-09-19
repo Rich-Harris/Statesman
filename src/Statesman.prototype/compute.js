@@ -143,6 +143,8 @@
 									statesman.set( self.keypath, result );
 									self.setting = false;
 								}
+
+								self.value = result;
 							};
 						};
 					}
