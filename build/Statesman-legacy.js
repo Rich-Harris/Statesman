@@ -1,4 +1,4 @@
-/*! Statesman - v0.2.1 - 2013-08-17
+/*! Statesman - v0.2.1 - 2013-09-19
 * The JavaScript state management library
 
 * 
@@ -487,6 +487,8 @@ statesmanProto.add = function ( keypath, d ) {
 									statesman.set( self.keypath, result );
 									self.setting = false;
 								}
+
+								self.value = result;
 							};
 						};
 					}
@@ -1252,7 +1254,7 @@ subsetProto.add = function ( keypath, d ) {
 
 			for ( k in keypath ) {
 				if ( keypath.hasOwnProperty( k ) ) {
-					result[k] = compute( this, k, keypath );
+					result[k] = compute( this, k, keypath[k] );
 				}
 			}
 
@@ -1296,7 +1298,7 @@ subsetProto.add = function ( keypath, d ) {
 	};
 
 }( subsetProto ));
-subsetProto.get = function ( keypath ) {
+subsetProto.get = subsetProto.toJSON = function ( keypath ) {
 	if ( !keypath ) {
 		return this.root.get( this.path );
 	}
