@@ -16,10 +16,10 @@ window.onload = function () {
 		module( currentModule.name );
 
 		runTest = function ( currentTest ) {
-			test( currentTest.title, function () {
+			test( currentTest.title, function ( t ) {
 				console.group( ++k );
 
-				currentTest.test();
+				currentTest.test( t );
 
 				console.groupEnd();
 			});
