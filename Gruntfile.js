@@ -19,8 +19,8 @@ module.exports = function(grunt) {
 			js: {
 				files: [ 'src/**/*.js', 'wrapper/**/*.js' ],
 				tasks: [ 'clean:tmp', 'concat', 'jshint' ],
-				interrupt: true,
 				options: {
+					interrupt: true,
 					force: true
 				}
 			}
