@@ -11,7 +11,7 @@
 
 			for ( k in keypath ) {
 				if ( keypath.hasOwnProperty( k ) ) {
-					result[k] = compute( this, k, keypath );
+					result[k] = compute( this, k, keypath[k] );
 				}
 			}
 
