@@ -29,7 +29,7 @@ get = function ( statesman, keypath, keys, forceCache ) {
 	parentKeypath = keys.join( '.' );
 	parentValue = get( statesman, parentKeypath, keys );
 
-	if ( typeof parentValue === 'object' && parentValue.hasOwnProperty( lastKey ) ) {
+	if ( parentValue && parentValue[ lastKey ] !== undefined ) {
 		value = parentValue[ lastKey ];
 		statesman.cache[ keypath ] = value;
 
