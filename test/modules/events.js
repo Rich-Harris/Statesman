@@ -1,136 +1,129 @@
-modules[ modules.length ] = {
-	name: 'Events',
-	tests: [
-		{
-			title: '.on() and .fire() work as expected',
-			test: function () {
-				var model = new Statesman(), message, entity;
+define([ 'Statesman' ], function ( Statesman ) {
 
-				model.on( 'test', function ( msg, ent ) {
+	'use strict';
+
+	window.Statesman = Statesman;
+
+	return function () {
+
+		module( 'Events' );
+
+		test( '.on() and .fire() work as expected', function ( t ) {
+			var model = new Statesman(), message, entity;
+
+			model.on( 'test', function ( msg, ent ) {
+				message = msg;
+				entity = ent;
+			});
+
+			equal( message, undefined );
+			equal( entity, undefined );
+
+			model.fire( 'test', 'hello', 'world' );
+
+			equal( message, 'hello' );
+			equal( entity, 'world' );
+		});
+
+		test( '.on() can add multiple listeners simultaneously', function ( t ) {
+			var model = new Statesman(), message, entity;
+
+			model.on({
+				greeting: function ( msg, ent ) {
 					message = msg;
 					entity = ent;
-				});
+				},
+				farewell: function ( msg, ent ) {
+					message = msg;
+					entity = ent;
+				}
+			});
 
-				equal( message, undefined );
-				equal( entity, undefined );
+			equal( message, undefined );
+			equal( entity, undefined );
 
-				model.fire( 'test', 'hello', 'world' );
+			model.fire( 'greeting', 'hello', 'world' );
 
-				equal( message, 'hello' );
-				equal( entity, 'world' );
-			}
-		},
+			equal( message, 'hello' );
+			equal( entity, 'world' );
 
-		{
-			title: '.on() can add multiple listeners simultaneously',
-			test: function () {
-				var model = new Statesman(), message, entity;
+			model.fire( 'farewell', 'goodbye', 'everybody' );
 
-				model.on({
-					greeting: function ( msg, ent ) {
-						message = msg;
-						entity = ent;
-					},
-					farewell: function ( msg, ent ) {
-						message = msg;
-						entity = ent;
-					}
-				});
+			equal( message, 'goodbye' );
+			equal( entity, 'everybody' );
+		});
 
-				equal( message, undefined );
-				equal( entity, undefined );
+		test( '.on() returns an object with a cancel property which removes listeners', function ( t ) {
+			var model = new Statesman(), listener, triggered = 0;
 
-				model.fire( 'greeting', 'hello', 'world' );
+			listener = model.on( 'test', function () {
+				triggered += 1;
+			});
 
-				equal( message, 'hello' );
-				equal( entity, 'world' );
+			equal( triggered, 0 );
 
-				model.fire( 'farewell', 'goodbye', 'everybody' );
+			model.fire( 'test' );
+			equal( triggered, 1 );
 
-				equal( message, 'goodbye' );
-				equal( entity, 'everybody' );
-			}
-		},
+			listener.cancel();
+			model.fire( 'test' );
+			equal( triggered, 1 );
+		});
 
-		{
-			title: '.on() returns an object with a cancel property which removes listeners',
-			test: function () {
-				var model = new Statesman(), listener, triggered = 0;
+		test( '.on() with multiple callbacks returns an object with a cancel property which removes all listeners', function ( t ) {
+			var model = new Statesman(), listener, triggered1 = 0, triggered2 = 0;
 
-				listener = model.on( 'test', function () {
-					triggered += 1;
-				});
+			listener = model.on({
+				test1: function () {
+					triggered1 += 1;
+				},
+				test2: function () {
+					triggered2 += 1;
+				}
+			});
 
-				equal( triggered, 0 );
+			equal( triggered1, 0 );
+			equal( triggered2, 0 );
 
-				model.fire( 'test' );
-				equal( triggered, 1 );
+			model.fire( 'test1' );
+			equal( triggered1, 1 );
+			equal( triggered2, 0 );
 
-				listener.cancel();
-				model.fire( 'test' );
-				equal( triggered, 1 );
-			}
-		},
+			listener.cancel();
+			model.fire( 'test1' );
+			equal( triggered1, 1 );
+			equal( triggered2, 0 );
+		});
 
-		{
-			title: '.on() with multiple callbacks returns an object with a cancel property which removes all listeners',
-			test: function () {
-				var model = new Statesman(), listener, triggered1 = 0, triggered2 = 0;
+		test( '.off() without arguments removes all listeners', function ( t ) {
+			var model = new Statesman(), message, entity;
 
-				listener = model.on({
-					test1: function () {
-						triggered1 += 1;
-					},
-					test2: function () {
-						triggered2 += 1;
-					}
-				});
+			model.on({
+				greeting: function ( msg, ent ) {
+					message = msg;
+					entity = ent;
+				},
+				farewell: function ( msg, ent ) {
+					message = msg;
+					entity = ent;
+				}
+			});
 
-				equal( triggered1, 0 );
-				equal( triggered2, 0 );
+			equal( message, undefined );
+			equal( entity, undefined );
 
-				model.fire( 'test1' );
-				equal( triggered1, 1 );
-				equal( triggered2, 0 );
+			model.off();
 
-				listener.cancel();
-				model.fire( 'test1' );
-				equal( triggered1, 1 );
-				equal( triggered2, 0 );
-			}
-		},
+			model.fire( 'greeting', 'hello', 'world' );
 
-		{
-			title: '.off() without arguments removes all listeners',
-			test: function () {
-				var model = new Statesman(), message, entity;
+			equal( message, undefined );
+			equal( entity, undefined );
 
-				model.on({
-					greeting: function ( msg, ent ) {
-						message = msg;
-						entity = ent;
-					},
-					farewell: function ( msg, ent ) {
-						message = msg;
-						entity = ent;
-					}
-				});
+			model.fire( 'farewell', 'goodbye', 'everybody' );
 
-				equal( message, undefined );
-				equal( entity, undefined );
+			equal( message, undefined );
+			equal( entity, undefined );
+		});
+	};
 
-				model.off();
-
-				model.fire( 'greeting', 'hello', 'world' );
-
-				equal( message, undefined );
-				equal( entity, undefined );
-
-				model.fire( 'farewell', 'goodbye', 'everybody' );
-
-				equal( message, undefined );
-				equal( entity, undefined );
-			}
-		}
-	]
-};
+});

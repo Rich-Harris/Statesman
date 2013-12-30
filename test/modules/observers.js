@@ -1,351 +1,311 @@
-modules[ modules.length ] = {
-	name: 'Observers',
-	tests: [
-		{
-			title: 'Observing "foo" adds a dependant to state.deps.foo',
-			test: function () {
-				var state = new Statesman(), callback = function () {}, observer;
+define([ 'Statesman' ], function ( Statesman ) {
 
-				state.observe( 'foo', callback );
-				ok( _.isArray( state.deps.foo ) );
-				ok( _.isObject( state.deps.foo[0] ) );
+	'use strict';
 
-				observer = state.deps.foo[0];
+	window.Statesman = Statesman;
 
-				equal( callback, observer.callback );
-			}
-		},
+	return function () {
 
-		{
-			title: 'Observing "foo", then setting "foo", triggers the callback',
-			test: function () {
-				var state = new Statesman(), value;
+		module( 'Observers' );
 
-				state.observe( 'foo', function ( val ) {
-					value = val;
-				});
+		test( 'Observing "foo" adds a dependant to state.deps.foo', function ( t ) {
+			var state = new Statesman(), callback = function () {}, observer;
 
-				state.set( 'foo', 'bar' );
-				equal( value, 'bar' );
-			}
-		},
+			state.observe( 'foo', callback );
+			ok( _.isArray( state.deps.foo ) );
+			ok( _.isObject( state.deps.foo[0] ) );
 
-		{
-			title: 'Observing "foo", then setting "foo" silently, does not trigger the callback',
-			test: function () {
-				var state = new Statesman(), value;
+			observer = state.deps.foo[0];
 
-				state.observe( 'foo', function ( val ) {
-					value = val;
-				});
+			equal( callback, observer.callback );
+		});
 
-				state.set( 'foo', 'bar', { silent: true });
-				equal( value, undefined );
-			}
-		},
+		test( 'Observing "foo", then setting "foo", triggers the callback', function ( t ) {
+			var state = new Statesman(), value;
 
-		{
-			title: 'Observers can be cancelled',
-			test: function () {
-				var state, observer, triggered = 0;
+			state.observe( 'foo', function ( val ) {
+				value = val;
+			});
 
-				state = new Statesman({
-					foo: 'bar'
-				});
+			state.set( 'foo', 'bar' );
+			equal( value, 'bar' );
+		});
 
-				observer = state.observe( 'foo', function () {
-					triggered += 1;
-				}, { init: false });
+		test( 'Observing "foo", then setting "foo" silently, does not trigger the callback', function ( t ) {
+			var state = new Statesman(), value;
 
-				state.set( 'foo', 'baz' );
+			state.observe( 'foo', function ( val ) {
+				value = val;
+			});
 
-				observer.cancel();
-				state.set( 'foo', 'bar' );
+			state.set( 'foo', 'bar', { silent: true });
+			equal( value, undefined );
+		});
 
-				equal( triggered, 1 );
-			}
-		},
+		test( 'Observers can be cancelled', function ( t ) {
+			var state, observer, triggered = 0;
 
-		{
-			title: 'Setting an item only triggers callbacks if the value changes',
-			test: function () {
-				var state = new Statesman(), i = 0;
+			state = new Statesman({
+				foo: 'bar'
+			});
 
-				state.observe( 'foo', function () {
-					i += 1;
-				}, { init: false });
+			observer = state.observe( 'foo', function () {
+				triggered += 1;
+			}, { init: false });
 
-				state.set( 'foo', 'bar' );
-				state.set( 'foo', 'bar' );
+			state.set( 'foo', 'baz' );
 
-				equal( i, 1 );
-			}
-		},
+			observer.cancel();
+			state.set( 'foo', 'bar' );
 
-		{
-			title: 'Callbacks are passed both new and previous value',
-			test: function () {
-				var state = new Statesman(), oldValue, newValue;
+			equal( triggered, 1 );
+		});
 
-				state.observe( 'foo', function ( n, o ) {
-					newValue = n;
-					oldValue = o;
-				});
+		test( 'Setting an item only triggers callbacks if the value changes', function ( t ) {
+			var state = new Statesman(), i = 0;
 
-				state.set( 'foo', 'bar' );
-				equal( newValue, 'bar' );
-				equal( oldValue, undefined );
+			state.observe( 'foo', function () {
+				i += 1;
+			}, { init: false });
 
-				state.set( 'foo', 'baz' );
-				equal( newValue, 'baz' );
-				equal( oldValue, 'bar' );
-			}
-		},
+			state.set( 'foo', 'bar' );
+			state.set( 'foo', 'bar' );
 
-		{
-			title: 'Setting a value causes downstream observers to be notified',
-			test: function () {
-				var state = new Statesman(), value;
+			equal( i, 1 );
+		});
 
-				state.observe( 'foo.bar', function ( val ) {
-					value = val;
-				});
+		test( 'Callbacks are passed both new and previous value', function ( t ) {
+			var state = new Statesman(), oldValue, newValue;
 
-				state.set( 'foo', { bar: 'baz' } );
+			state.observe( 'foo', function ( n, o ) {
+				newValue = n;
+				oldValue = o;
+			});
 
-				equal( value, 'baz' );
-			}
-		},
+			state.set( 'foo', 'bar' );
+			equal( newValue, 'bar' );
+			equal( oldValue, undefined );
 
-		{
-			title: 'Notifications are skipped for values that haven\'t changed when upstream values change',
-			test: function () {
-				var triggered, state = new Statesman({
-					foo: {
-						a: 1,
-						b: 2,
-						bar: 'baz'
-					}
-				});
+			state.set( 'foo', 'baz' );
+			equal( newValue, 'baz' );
+			equal( oldValue, 'bar' );
+		});
 
-				state.observe( 'foo.bar', function () {
-					triggered = true;
-				}, { init: false });
+		test( 'Setting a value causes downstream observers to be notified', function ( t ) {
+			var state = new Statesman(), value;
 
-				state.set( 'foo', { c: 3, d: 4, bar: 'baz' } );
+			state.observe( 'foo.bar', function ( val ) {
+				value = val;
+			});
 
-				ok( !triggered );
-			}
-		},
+			state.set( 'foo', { bar: 'baz' } );
 
-		{
-			title: 'Observers are notified when downstream keypaths are set',
-			test: function () {
-				var triggered, state = new Statesman({
-					foo: {
-						a: 1,
-						b: 2,
-						bar: 'baz'
-					}
-				});
+			equal( value, 'baz' );
+		});
 
-				state.observe( 'foo', function () {
-					triggered = true;
-				});
-
-				state.set( 'foo.bar', 'boo' );
-				
-				ok( triggered );
-			}
-		},
-
-		{
-			title: 'Observers are not notified when downstream keypaths are set but not changed',
-			test: function () {
-				var triggered, state = new Statesman({
-					foo: {
-						a: 1,
-						b: 2,
-						bar: 'baz'
-					}
-				});
-
-				state.observe( 'foo', function () {
-					console.log( 'triggering' );
-					triggered = true;
-				}, { init: false });
-
-				state.set( 'foo.bar', 'baz' );
-				
-				ok( !triggered );
-			}
-		},
-
-		{
-			title: 'Multiple observers can be set in one go',
-			test: function () {
-				var state, finalFoo, finalBar, finalBaz;
-
-				state = new Statesman({
-					foo: 'bar',
-					bar: 'baz',
-					baz: 'foo'
-				});
-
-				state.observe({
-					foo: function ( newFoo ) {
-						finalFoo = newFoo;
-					},
-					bar: function ( newBar ) {
-						finalBar = newBar;
-					},
-					baz: function ( newBaz ) {
-						finalBaz = newBaz;
-					}
-				});
-
-				state.set({
-					foo: 'baz',
-					bar: 'foo',
-					baz: 'bar'
-				});
-
-				equal( finalFoo, 'baz' );
-				equal( finalBar, 'foo' );
-				equal( finalBaz, 'bar' );
-			}
-		},
-
-		{
-			title: 'Omitting a keypath causes the entire state model to be observed',
-			test: function () {
-				var observers, state, currentFoo, currentBar;
-
-				state = new Statesman({
-					foo: 'bar',
+		test( 'Notifications are skipped for values that haven\'t changed when upstream values change', function ( t ) {
+			var triggered, state = new Statesman({
+				foo: {
+					a: 1,
+					b: 2,
 					bar: 'baz'
-				});
+				}
+			});
 
-				observers = state.observe( function ( state ) {
-					currentFoo = state.foo;
-					currentBar = state.bar;
-				});
+			state.observe( 'foo.bar', function () {
+				triggered = true;
+			}, { init: false });
 
-				state.set( 'foo', 'baz' );
-				state.set( 'bar', 'boo' );
+			state.set( 'foo', { c: 3, d: 4, bar: 'baz' } );
 
-				equal( currentFoo, 'baz' );
-				equal( currentBar, 'boo' );
-			}
-		},
+			ok( !triggered );
+		});
 
-		{
-			title: 'Observers can be cancelled with state.unobserve( keypath )',
-			test: function () {
-				var state, observer, triggered = 0;
+		test( 'Observers are notified when downstream keypaths are set', function ( t ) {
+			var triggered, state = new Statesman({
+				foo: {
+					a: 1,
+					b: 2,
+					bar: 'baz'
+				}
+			});
 
-				state = new Statesman({
-					foo: 'bar'
-				});
+			state.observe( 'foo', function () {
+				triggered = true;
+			});
 
-				observer = state.observe( 'foo', function () {
-					triggered += 1;
-				}, { init: false });
+			state.set( 'foo.bar', 'boo' );
 
-				state.set( 'foo', 'baz' );
-				equal( triggered, 1 );
+			ok( triggered );
+		});
 
-				state.unobserve( 'foo' );
+		test( 'Observers are not notified when downstream keypaths are set but not changed', function ( t ) {
+			var triggered, state = new Statesman({
+				foo: {
+					a: 1,
+					b: 2,
+					bar: 'baz'
+				}
+			});
 
-				state.set( 'foo', 'bar' );
-				equal( triggered, 1 );
-			}
-		},
+			state.observe( 'foo', function () {
+				console.log( 'triggering' );
+				triggered = true;
+			}, { init: false });
 
-		{
-			title: 'state.unobserve() with no keypath cancels root observers',
-			test: function () {
-				var state, observer, triggered = 0;
+			state.set( 'foo.bar', 'baz' );
 
-				state = new Statesman({
-					foo: 'bar'
-				});
+			ok( !triggered );
+		});
 
-				observer = state.observe( function () {
-					triggered += 1;
-				}, { init: false });
+		test( 'Multiple observers can be set in one go', function ( t ) {
+			var state, finalFoo, finalBar, finalBaz;
 
-				equal( triggered, 0 );
+			state = new Statesman({
+				foo: 'bar',
+				bar: 'baz',
+				baz: 'foo'
+			});
 
-				state.set( 'foo', 'baz' );
-				equal( triggered, 1 );
+			state.observe({
+				foo: function ( newFoo ) {
+					finalFoo = newFoo;
+				},
+				bar: function ( newBar ) {
+					finalBar = newBar;
+				},
+				baz: function ( newBaz ) {
+					finalBaz = newBaz;
+				}
+			});
 
-				state.unobserve();
+			state.set({
+				foo: 'baz',
+				bar: 'foo',
+				baz: 'bar'
+			});
 
-				state.set( 'foo', 'bar' );
-				equal( triggered, 1 );
-			}
-		},
+			equal( finalFoo, 'baz' );
+			equal( finalBar, 'foo' );
+			equal( finalBaz, 'bar' );
+		});
 
-		{
-			title: 'state.unobserveAll() removes all observers',
-			test: function () {
-				var state, observer1, observer2, triggered = 0;
+		test( 'Omitting a keypath causes the entire state model to be observed', function ( t ) {
+			var observers, state, currentFoo, currentBar;
 
-				state = new Statesman({
-					foo: 'bar'
-				});
+			state = new Statesman({
+				foo: 'bar',
+				bar: 'baz'
+			});
 
-				observer1 = state.observe( 'foo', function () {
-					triggered += 1;
-				}, { init: false });
+			observers = state.observe( function ( state ) {
+				currentFoo = state.foo;
+				currentBar = state.bar;
+			});
 
-				observer2 = state.observe( function () {
-					triggered += 1;
-				}, { init: false });
+			state.set( 'foo', 'baz' );
+			state.set( 'bar', 'boo' );
 
-				equal( triggered, 0 );
+			equal( currentFoo, 'baz' );
+			equal( currentBar, 'boo' );
+		});
 
-				state.set( 'foo', 'baz' );
-				equal( triggered, 2 );
+		test( 'Observers can be cancelled with state.unobserve( keypath )', function ( t ) {
+			var state, observer, triggered = 0;
 
-				state.unobserveAll();
+			state = new Statesman({
+				foo: 'bar'
+			});
 
-				state.set( 'foo', 'bar' );
-				equal( triggered, 2 );
-			}
-		},
+			observer = state.observe( 'foo', function () {
+				triggered += 1;
+			}, { init: false });
 
-		{
-			title: 'Keypaths passed to state.unobserve are normalised',
-			test: function () {
-				var state, observer1, observer2, triggered = 0;
+			state.set( 'foo', 'baz' );
+			equal( triggered, 1 );
 
-				state = new Statesman({
-					array: [ 1, 2, 3 ]
-				});
+			state.unobserve( 'foo' );
 
-				observer1 = state.observe( 'array[0]', function () {
-					triggered += 1;
-				}, { init: false });
+			state.set( 'foo', 'bar' );
+			equal( triggered, 1 );
+		});
 
-				observer2 = state.observe( 'array[1]', function () {
-					triggered += 1;
-				}, { init: false });
+		test( 'state.unobserve() with no keypath cancels root observers', function ( t ) {
+			var state, observer, triggered = 0;
 
-				equal( triggered, 0 );
+			state = new Statesman({
+				foo: 'bar'
+			});
 
-				state.set( 'array[0]', 4 );
-				state.set( 'array.1', 5 );
-				equal( triggered, 2 );
+			observer = state.observe( function () {
+				triggered += 1;
+			}, { init: false });
 
-				state.unobserve( 'array[0]' );
-				state.unobserve( 'array.1' );
+			equal( triggered, 0 );
 
-				state.set( 'array[0]', 5 );
-				state.set( 'array.1', 6 );
-				equal( triggered, 2 );
-			}
-		}
-	]
-};
+			state.set( 'foo', 'baz' );
+			equal( triggered, 1 );
+
+			state.unobserve();
+
+			state.set( 'foo', 'bar' );
+			equal( triggered, 1 );
+		});
+
+		test( 'state.unobserveAll() removes all observers', function ( t ) {
+			var state, observer1, observer2, triggered = 0;
+
+			state = new Statesman({
+				foo: 'bar'
+			});
+
+			observer1 = state.observe( 'foo', function () {
+				triggered += 1;
+			}, { init: false });
+
+			observer2 = state.observe( function () {
+				triggered += 1;
+			}, { init: false });
+
+			equal( triggered, 0 );
+
+			state.set( 'foo', 'baz' );
+			equal( triggered, 2 );
+
+			state.unobserveAll();
+
+			state.set( 'foo', 'bar' );
+			equal( triggered, 2 );
+		});
+
+		test( 'Keypaths passed to state.unobserve are normalised', function ( t ) {
+			var state, observer1, observer2, triggered = 0;
+
+			state = new Statesman({
+				array: [ 1, 2, 3 ]
+			});
+
+			observer1 = state.observe( 'array[0]', function () {
+				triggered += 1;
+			}, { init: false });
+
+			observer2 = state.observe( 'array[1]', function () {
+				triggered += 1;
+			}, { init: false });
+
+			equal( triggered, 0 );
+
+			state.set( 'array[0]', 4 );
+			state.set( 'array.1', 5 );
+			equal( triggered, 2 );
+
+			state.unobserve( 'array[0]' );
+			state.unobserve( 'array.1' );
+
+			state.set( 'array[0]', 5 );
+			state.set( 'array.1', 6 );
+			equal( triggered, 2 );
+		});
+	};
+
+});

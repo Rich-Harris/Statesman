@@ -4,63 +4,52 @@ module.exports = function(grunt) {
 	// Project configuration.
 	grunt.initConfig({
 		pkg: grunt.file.readJSON( 'package.json' ),
-		
-		meta: {
-			banner: '/*! Statesman - v<%= pkg.version %> - <%= grunt.template.today("yyyy-mm-dd") %>\n' +
-				'* <%= pkg.description %>\n\n' +
-				'* <%= pkg.homepage %>\n' +
-				'* Copyright (c) <%= grunt.template.today("yyyy") %> <%= pkg.author.name %>;' +
-				' MIT Licensed */\n' +
-				'/*jslint eqeq: true, plusplus: true */\n' +
-				'\n\n'
-		},
-
-		watch: {
-			js: {
-				files: [ 'src/**/*.js', 'wrapper/**/*.js' ],
-				tasks: [ 'clean:tmp', 'concat', 'jshint' ],
-				options: {
-					interrupt: true,
-					force: true
-				}
-			}
-		},
 
 		qunit: {
-			all: [ 'test/index.html' ]
+			all: [ 'test/build/index.html' ]
 		},
+
 		concat: {
 			options: {
-				banner: '<%= meta.banner %>',
+				banner: grunt.file.read( 'wrapper/banner.js' ),
 				process: {
 					data: { version: '<%= pkg.version %>' }
 				}
 			},
 			build: {
-				src: [ 'wrapper/begin.js', 'src/**/*.js', 'wrapper/end.js' ],
-				dest: 'tmp/Statesman.js'
-			},
-			legacy: {
-				src: [ 'wrapper/begin.js', 'legacy.js', 'src/**/*.js', 'wrapper/end.js' ],
-				dest: 'tmp/Statesman-legacy.js'
+				src: [ 'tmp/Ractive.js'  ],
+				dest: 'build/Ractive.js'
 			}
 		},
+
 		jshint: {
 			options: {
-				jshintrc: '.jshintrc'
+				curly: true,
+				eqeqeq: true,
+				immed: true,
+				newcap: true,
+				noarg: true,
+				sub: true,
+				undef: true,
+				unused: true,
+				boss: true,
+				eqnull: true,
+				evil: true,
+				globals: {
+					module: true,
+					define: true
+				}
 			},
-			files: [ 'tmp/Statesman.js' ]
+			files: [ 'src/**/*.js' ]
 		},
+
 		uglify: {
 			build: {
-				src: [ 'tmp/Statesman.js' ],
-				dest: 'tmp/Statesman.min.js'
-			},
-			legacy: {
-				src: [ 'tmp/Statesman-legacy.js' ],
-				dest: 'tmp/Statesman-legacy.min.js'
+				src: [ 'build/Statesman.js' ],
+				dest: 'build/Statesman.min.js'
 			}
 		},
+
 		copy: {
 			build: {
 				files: [{
@@ -70,6 +59,7 @@ module.exports = function(grunt) {
 					dest: 'build/'
 				}]
 			},
+
 			release: {
 				files: [{
 					cwd: 'build',
@@ -78,6 +68,7 @@ module.exports = function(grunt) {
 					dest: 'release/<%= pkg.version %>/'
 				}]
 			},
+
 			shortcut: {
 				files: [{
 					cwd: 'build',
@@ -87,9 +78,30 @@ module.exports = function(grunt) {
 				}]
 			}
 		},
+
 		clean: {
 			tmp: [ 'tmp' ],
 			build: [ 'build' ]
+		},
+
+		requirejs: {
+			compile: {
+				options: {
+					baseUrl: 'src/',
+					name: 'Statesman',
+					out: 'tmp/Statesman.js',
+					optimize: 'none',
+					findNestedDependencies: true,
+					onBuildWrite: function( name, path, contents ) {
+						return require( 'amdclean' ).clean( contents );
+					},
+
+					wrap: {
+						startFile: 'wrapper/intro.js',
+						endFile: 'wrapper/outro.js'
+					}
+				}
+			}
 		}
 	});
 
@@ -101,18 +113,20 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks( 'grunt-contrib-uglify' );
 	grunt.loadNpmTasks( 'grunt-contrib-copy' );
 	grunt.loadNpmTasks( 'grunt-contrib-clean' );
+	grunt.loadNpmTasks( 'grunt-contrib-requirejs' );
 
 	// build task
 	grunt.registerTask( 'build', [
-		'clean:tmp',
-		'concat',
 		'jshint',
-		'uglify',
+		'clean:tmp',
+		'requirejs',
 		'qunit',
+		'concat',
+		'uglify',
 		'clean:build',
 		'copy:build'
 	]);
-	
+
 	grunt.registerTask( 'release', [ 'build', 'copy:release', 'copy:shortcut' ] );
 
 	grunt.registerTask( 'default', [ 'build' ] );

@@ -1,678 +1,605 @@
-modules[ modules.length ] = {
-	name: 'Computed values',
-	tests: [
-		{
-			title: 'Can create a computed value',
-			test: function () {
-				var model = new Statesman({
-					foo: [ 1, 2, 3, 4 ]
-				});
+define([ 'Statesman' ], function ( Statesman ) {
 
-				model.compute( 'sum', {
-					dependsOn: 'foo',
-					get: function ( foo ) {
-						var sum;
+	'use strict';
 
-						sum = foo.reduce( function ( prev, curr ) {
-							return prev + curr;
-						});
+	window.Statesman = Statesman;
 
-						return sum;
-					}
-				});
+	return function () {
 
-				equal( model.get( 'sum' ), 10 );
-			}
-		},
+		module( 'Computed values' );
 
-		{
-			title: 'Computed values update as expected',
-			test: function () {
-				var model = new Statesman({
-					foo: [ 1, 2, 3, 4 ]
-				});
+		test( 'Can create a computed value', function ( t ) {
+			var model = new Statesman({
+				foo: [ 1, 2, 3, 4 ]
+			});
 
-				model.compute( 'sum', {
-					dependsOn: 'foo',
-					get: function ( foo ) {
-						var sum;
+			model.compute( 'sum', {
+				dependsOn: 'foo',
+				get: function ( foo ) {
+					var sum;
 
-						sum = foo.reduce( function ( prev, curr ) {
-							return prev + curr;
-						});
-
-						return sum;
-					}
-				});
-
-				model.set( 'foo[4]', 5 );
-
-				equal( model.get( 'sum' ), 15 );
-			}
-		},
-
-		{
-			title: 'Computed values notify observers when their dependencies change',
-			test: function () {
-				var result, model = new Statesman({
-					foo: [ 1, 2, 3, 4 ]
-				});
-
-				model.compute( 'sum', {
-					dependsOn: 'foo',
-					get: function ( foo ) {
-						var sum;
-
-						sum = foo.reduce( function ( prev, curr ) {
-							return prev + curr;
-						});
-
-						return sum;
-					}
-				});
-
-				model.observe( 'sum', function ( sum ) {
-					result = sum;
-				});
-
-				model.set( 'foo[4]', 5 );
-
-				equal( result, 15 );
-			}
-		},
-
-		{
-			title: 'Computed values only notify observers once even if multiple dependencies change simultaneously',
-			test: function () {
-				var triggered = 0, finalValue, model = new Statesman({
-					foo: 2,
-					bar: 4
-				});
-
-				model.compute( 'baz', {
-					dependsOn: [ 'foo', 'bar' ],
-					get: function ( foo, bar ) {
-						return foo + bar;
-					}
-				});
-
-				model.observe( 'baz', function ( baz ) {
-					triggered += 1;
-					finalValue = baz;
-				});
-
-				equal( triggered, 1 ); // init
-
-				model.set({
-					foo: 10,
-					bar: 20
-				});
-
-				equal( finalValue, 30 );
-				equal( triggered, 2 );
-			}
-		},
-
-		{
-			title: 'Computed values can be observed before they are defined, or after',
-			test: function () {
-				var model, sumResult, productResult;
-
-				model = new Statesman({
-					foo: [ 1, 2, 3, 4 ]
-				});
-
-				// observe sum
-				model.observe( 'sum', function ( sum ) {
-					sumResult = sum;
-				});
-
-				// create sum computed value
-				model.compute( 'sum', {
-					dependsOn: 'foo',
-					get: function ( foo ) {
-						var sum;
-
-						sum = foo.reduce( function ( prev, curr ) {
-							return prev + curr;
-						});
-
-						return sum;
-					}
-				});
-
-				// create product computed value
-				model.compute( 'product', {
-					dependsOn: 'foo',
-					get: function ( foo ) {
-						var product;
-
-						product = foo.reduce( function ( prev, curr ) {
-							return prev * curr;
-						}, 1 );
-
-						return product;
-					}
-				});
-
-				// observe product
-				model.observe( 'product', function ( product ) {
-					productResult = product;
-				});
-
-				equal( sumResult, 10 );
-				equal( productResult, 24 );
-
-				model.set( 'foo[4]', 5 );
-
-				equal( sumResult, 15 );
-				equal( productResult, 120 );
-			}
-		},
-
-		{
-			title: 'Computed values can be created without dependencies',
-			test: function () {
-				var model = new Statesman();
-
-				model.compute( 'foo', {
-					get: function () {
-						return 'bar';
-					}
-				});
-
-				equal( model.get( 'foo' ), 'bar' );
-			}
-		},
-
-		{
-			title: 'Uncached computed values are computed once at initialisation, and once for each get()',
-			test: function () {
-				var triggered = 0, model = new Statesman();
-
-				model.compute( 'random', {
-					get: function () {
-						triggered += 1;
-						return Math.random();
-					}
-				});
-
-				equal( triggered, 1 );
-
-				model.get( 'random' );
-				equal( triggered, 2 );
-
-				model.get( 'random' );
-				equal( triggered, 3 );
-			}
-		},
-
-		{
-			title: 'Cached computed values are computed once at initialisation but not for subsequent get() calls',
-			test: function () {
-				var triggered = 0, model = new Statesman();
-
-				model.compute( 'random', {
-					dependsOn: 'foo',
-					get: function () {
-						triggered += 1;
-						return Math.random();
-					},
-					cache: true
-				});
-
-				equal( triggered, 1 );
-
-				model.get( 'random' );
-				equal( triggered, 1 );
-
-				model.get( 'random' );
-				equal( triggered, 1 );
-			}
-		},
-
-		{
-			title: 'Uncached computed values with dependencies are triggered once for each time their dependencies are changed',
-			test: function () {
-				var triggered = 0, model = new Statesman({
-					foo: 'bar'
-				});
-
-				model.compute( 'FOO', {
-					dependsOn: 'foo',
-					get: function ( foo ) {
-						triggered += 1;
-						return foo.toUpperCase();
-					}
-				});
-
-				equal( triggered, 1 );
-
-				model.set( 'foo', 'baz' );
-				equal( triggered, 2 );
-
-				model.set( 'foo', 'baz' );
-				equal( triggered, 2 );
-
-				model.set( 'foo', 'boo' );
-				equal( triggered, 3 );
-			}
-		},
-
-		{
-			title: 'Cached computed values with dependencies are triggered once for each time their dependencies are changed',
-			test: function () {
-				var triggered = 0, model = new Statesman({
-					foo: 'bar'
-				});
-
-				model.compute( 'FOO', {
-					dependsOn: 'foo',
-					get: function ( foo ) {
-						triggered += 1;
-						return foo.toUpperCase();
-					},
-					cache: true
-				});
-
-				equal( triggered, 1 );
-
-				model.set( 'foo', 'baz' );
-				equal( triggered, 2 );
-
-				model.set( 'foo', 'baz' );
-				equal( triggered, 2 );
-
-				model.set( 'foo', 'boo' );
-				equal( triggered, 3 );
-			}
-		},
-
-		{
-			title: 'Computed values can have multiple dependencies',
-			test: function () {
-				var result, model = new Statesman({
-					firstname: 'Henry',
-					lastname: 'Jekyll'
-				});
-
-				model.compute( 'fullname', {
-					dependsOn: [ 'firstname', 'lastname' ],
-					get: function ( firstname, lastname ) {
-						return firstname + ' ' + lastname;
-					}
-				});
-
-				model.observe( 'fullname', function ( fullname ) {
-					result = fullname;
-				});
-
-				model.set( 'lastname', 'Hyde' );
-				equal( result, 'Henry Hyde' );
-
-				model.set( 'firstname', 'Edward' );
-				equal( result, 'Edward Hyde' );
-			}
-		},
-
-		{
-			title: 'Computed values that are downstream of their dependencies do not result in infinite loops',
-			test: function () {
-				var triggered = 0, model = new Statesman({
-					name: {
-						first: 'what',
-						last: 'ever'
-					}
-				});
-
-				model.observe( 'name', function () {
-					triggered += 1;
-				});
-
-				model.compute( 'name.full', {
-					dependsOn: 'name',
-					get: function ( name ) {
-						return name.first + ' ' + name.last;
-					}
-				});
-
-				ok( true );
-			}
-		},
-
-		{
-			title: 'Computed values are readonly by default and cannot therefore be manually set',
-			test: function () {
-				var model = new Statesman();
-
-				model.debug = true;
-
-				model.compute( 'foo', {
-					get: function () {
-						return 'bar';
-					}
-				});
-
-				try {
-					model.set( 'foo', 'baz' );
-				} catch ( err ) {
-					equal( err.message, 'You cannot overwrite a computed value ("foo"), unless its readonly flag is set true' );
-				}
-			}
-		},
-
-		{
-			title: 'Computed values can have the readonly flag set false, and can therefore be manually set',
-			test: function () {
-				var model = new Statesman();
-
-				model.compute( 'foo', {
-					get: function () {
-						return 'bar';
-					},
-					readonly: false
-				});
-
-				model.set( 'foo', 'baz' );
-				equal( model.get( 'foo' ), 'baz' );
-			}
-		},
-
-		{
-			title: 'Computed values with dependencies can have the readonly flag set false, and can therefore be manually set',
-			test: function () {
-				var model = new Statesman();
-
-				model.compute( 'foo', {
-					dependsOn: [ 'ben' ],
-					get: function () {
-						return 'bar';
-					},
-					readonly: false
-				});
-
-				model.set( 'foo', 'baz' );
-				equal( model.get( 'foo' ), 'baz' );
-			}
-		},
-
-		{
-			title: 'Computed values can work in both directions without infinite loops',
-			test: function () {
-				var triggered = 0, model = new Statesman({
-					lower: 'foo',
-					upper: 'FOO'
-				});
-
-				model.compute( 'lower', {
-					dependsOn: 'upper',
-					get: function ( upper ) {
-						triggered += 1;
-						return upper.toLowerCase();
-					},
-					readonly: false
-				});
-
-				model.compute( 'upper', {
-					dependsOn: 'lower',
-					get: function ( lower ) {
-						return lower.toUpperCase();
-					},
-					readonly: false
-				});
-
-				model.set( 'lower', 'bar' );
-				equal( model.get( 'upper' ), 'BAR' );
-
-				model.set( 'upper', 'BAZ' );
-				equal( model.get( 'lower' ), 'baz' );
-
-				model.set( 'lower', 'Foo' );
-				equal( model.get( 'lower' ), 'foo' );
-			}
-		},
-
-		{
-			title: 'A computed value cannot be its own dependency',
-			test: function () {
-				var model = new Statesman();
-
-				try {
-					model.compute( 'test', {
-						dependsOn: 'test',
-						get: function () {
-							// noop
-						}
+					sum = foo.reduce( function ( prev, curr ) {
+						return prev + curr;
 					});
-				} catch ( err ) {
-					equal( err.message, 'A computed value ("test") cannot depend on itself' );
+
+					return sum;
 				}
-			}
-		},
+			});
 
-		{
-			title: 'Computed values overwrite existing non-computed values',
-			test: function () {
-				var model = new Statesman({
-					foo: 'bar'
-				});
+			t.equal( model.get( 'sum' ), 10 );
+		});
 
-				model.compute( 'foo', {
-					get: function () {
-						return 'baz';
-					}
-				});
+		test( 'Computed values update as expected', function ( t ) {
+			var model = new Statesman({
+				foo: [ 1, 2, 3, 4 ]
+			});
 
-				equal( model.get( 'foo' ), 'baz' );
-			}
-		},
+			model.compute( 'sum', {
+				dependsOn: 'foo',
+				get: function ( foo ) {
+					var sum;
 
-		{
-			title: 'Multiple computed values can be set in one go - the method will return a hash of values',
-			test: function () {
-				var computed, model = new Statesman();
+					sum = foo.reduce( function ( prev, curr ) {
+						return prev + curr;
+					});
 
-				computed = model.compute({
-					foo: {
-						get: function () { return 'bar'; }
-					},
-					bar: {
-						get: function () { return 'baz'; }
-					}
-				});
+					return sum;
+				}
+			});
 
-				equal( computed.foo, 'bar' );
-				equal( computed.bar, 'baz' );
+			model.set( 'foo[4]', 5 );
 
-				equal( model.get( 'foo' ), 'bar' );
-				equal( model.get( 'bar' ), 'baz' );
-			}
-		},
+			t.equal( model.get( 'sum' ), 15 );
+		});
 
-		{
-			title: 'Computed values can be removed, and their references will be torn down',
-			test: function () {
-				var model = new Statesman({
-					foo: 'bar',
-					bar: 'baz'
-				});
+		test( 'Computed values notify observers when their dependencies change', function ( t ) {
+			var result, model = new Statesman({
+				foo: [ 1, 2, 3, 4 ]
+			});
 
-				model.compute( 'foobar', {
-					dependsOn: [ 'foo', 'bar' ],
-					get: function ( foo, bar ) {
-						return foo + bar;
-					}
-				});
+			model.compute( 'sum', {
+				dependsOn: 'foo',
+				get: function ( foo ) {
+					var sum;
 
-				ok( _.isArray( model.refs.foo ) && model.refs.foo.length === 1 );
-				ok( _.isArray( model.refs.bar ) && model.refs.bar.length === 1 );
-				ok( _.isObject( model.computed.foobar ) );
+					sum = foo.reduce( function ( prev, curr ) {
+						return prev + curr;
+					});
 
-				model.removeComputedValue( 'foobar' );
+					return sum;
+				}
+			});
 
-				ok( model.refs.foo.length === 0 );
-				ok( model.refs.bar.length === 0 );
-				ok( _.isNull( model.computed.foobar ) );
-			}
-		},
+			model.observe( 'sum', function ( sum ) {
+				result = sum;
+			});
 
-		{
-			title: 'Observers of computed values will only be notified once if multiple dependencies are changed simultaneously',
-			test: function () {
-				var triggered = 0, before, after, model = new Statesman({
-					firstname: 'Gisele',
-					lastname: 'Bündchen'
-				});
+			model.set( 'foo[4]', 5 );
 
-				model.compute( 'fullname', {
-					dependsOn: [ 'firstname', 'lastname' ],
-					get: function ( firstname, lastname ) {
-						triggered += 1;
-						return firstname + ' ' + lastname;
-					}
-				});
+			t.equal( result, 15 );
+		});
 
-				before = triggered;
+		test( 'Computed values only notify observers once even if multiple dependencies change simultaneously', function ( t ) {
+			var triggered = 0, finalValue, model = new Statesman({
+				foo: 2,
+				bar: 4
+			});
 
-				model.set({
-					firstname: 'Kate',
-					lastname: 'Moss'
-				});
+			model.compute( 'baz', {
+				dependsOn: [ 'foo', 'bar' ],
+				get: function ( foo, bar ) {
+					return foo + bar;
+				}
+			});
 
-				after = triggered;
+			model.observe( 'baz', function ( baz ) {
+				triggered += 1;
+				finalValue = baz;
+			});
 
-				equal( after - before, 1 );
-			}
-		},
+			t.equal( triggered, 1 ); // init
 
-		{
-			title: 'Computed values can be created using declarative syntax',
-			test: function () {
-				var model = new Statesman({
-					foo: [ 1, 2, 3, 4 ]
-				});
+			model.set({
+				foo: 10,
+				bar: 20
+			});
 
-				model.compute( 'sum', '${ foo }.reduce( function ( prev, curr ) { return prev + curr });' );
+			t.equal( finalValue, 30 );
+			t.equal( triggered, 2 );
+		});
 
-				equal( model.get( 'sum' ), 10 );
-			}
-		},
+		test( 'Computed values can be observed before they are defined, or after', function ( t ) {
+			var model, sumResult, productResult;
 
-		{
-			title: 'Computed values can be created using declarative syntax, using Statesman.utils',
-			test: function () {
-				var model = new Statesman({
-					foo: [ 1, 2, 3, 4 ]
-				});
+			model = new Statesman({
+				foo: [ 1, 2, 3, 4 ]
+			});
 
-				model.compute( 'sum', 'utils.total( ${ foo } )' );
+			// observe sum
+			model.observe( 'sum', function ( sum ) {
+				sumResult = sum;
+			});
 
-				equal( model.get( 'sum' ), 10 );
-			}
-		},
+			// create sum computed value
+			model.compute( 'sum', {
+				dependsOn: 'foo',
+				get: function ( foo ) {
+					var sum;
 
-		{
-			title: 'Compiled computed values trigger notifications when their values change',
-			test: function () {
-				var finalValue, model = new Statesman({
-					foo: 2
-				});
+					sum = foo.reduce( function ( prev, curr ) {
+						return prev + curr;
+					});
 
-				model.compute( 'double', '2 * ${foo}' );
+					return sum;
+				}
+			});
 
-				equal( model.get( 'double' ), 4 );
+			// create product computed value
+			model.compute( 'product', {
+				dependsOn: 'foo',
+				get: function ( foo ) {
+					var product;
 
-				model.observe( 'double', function ( newValue, oldValue ) {
-					finalValue = newValue;
-				});
+					product = foo.reduce( function ( prev, curr ) {
+						return prev * curr;
+					}, 1 );
 
-				model.set( 'foo', 4 );
+					return product;
+				}
+			});
 
-				equal( finalValue, 8 );
-			}
-		},
+			// observe product
+			model.observe( 'product', function ( product ) {
+				productResult = product;
+			});
 
-		{
-			title: 'Compiled computed values don\'t trigger notifications when their dependsOn change but they don\'t',
-			test: function () {
-				var triggered = 0, model = new Statesman({
-					foo: 2,
-					bar: 4
-				});
+			t.equal( sumResult, 10 );
+			t.equal( productResult, 24 );
 
-				model.compute( 'baz', '${foo} + ${bar}' );
+			model.set( 'foo[4]', 5 );
 
-				equal( model.get( 'baz' ), 6 );
+			t.equal( sumResult, 15 );
+			t.equal( productResult, 120 );
+		});
 
-				model.observe( 'baz', function ( newValue, oldValue ) {
+		test( 'Computed values can be created without dependencies', function ( t ) {
+			var model = new Statesman();
+
+			model.compute( 'foo', {
+				get: function () {
+					return 'bar';
+				}
+			});
+
+			t.equal( model.get( 'foo' ), 'bar' );
+		});
+
+		test( 'Uncached computed values are computed once at initialisation, and once for each get()', function ( t ) {
+			var triggered = 0, model = new Statesman();
+
+			model.compute( 'random', {
+				get: function () {
 					triggered += 1;
-				});
+					return Math.random();
+				}
+			});
 
-				equal( triggered, 1 ); // init
+			t.equal( triggered, 1 );
 
-				model.set({
-					foo: 3,
-					bar: 3
-				});
+			model.get( 'random' );
+			t.equal( triggered, 2 );
 
-				equal( triggered, 1 );
-			}
-		},
+			model.get( 'random' );
+			t.equal( triggered, 3 );
+		});
 
-		{
-			title: 'Compiled computed values only notify observers once even if multiple dependsOn change simultaneously',
-			test: function () {
-				var triggered = 0, finalValue, model = new Statesman({
-					foo: 2,
-					bar: 4
-				});
+		test( 'Cached computed values are computed once at initialisation but not for subsequent get() calls', function ( t ) {
+			var triggered = 0, model = new Statesman();
 
-				model.compute( 'baz', '${foo} + ${bar}' );
-
-				equal( model.get( 'baz' ), 6 );
-
-				model.observe( 'baz', function ( baz ) {
+			model.compute( 'random', {
+				dependsOn: 'foo',
+				get: function () {
 					triggered += 1;
-					finalValue = baz;
-				});
+					return Math.random();
+				},
+				cache: true
+			});
 
-				equal( triggered, 1 ); // init
+			t.equal( triggered, 1 );
 
-				model.set({
-					foo: 10,
-					bar: 20
-				});
+			model.get( 'random' );
+			t.equal( triggered, 1 );
 
-				equal( finalValue, 30 );
-				equal( triggered, 2 );
-			}
-		},
+			model.get( 'random' );
+			t.equal( triggered, 1 );
+		});
 
-		{
-			title: 'Multiple computed values that share a trigger are rolled into one `set` event',
-			test: function () {
-				var model, lastChange;
+		test( 'Uncached computed values with dependencies are triggered once for each time their dependencies are changed', function ( t ) {
+			var triggered = 0, model = new Statesman({
+				foo: 'bar'
+			});
 
-				model = new Statesman({
-					foo: 'bar'
-				});
+			model.compute( 'FOO', {
+				dependsOn: 'foo',
+				get: function ( foo ) {
+					triggered += 1;
+					return foo.toUpperCase();
+				}
+			});
 
-				model.compute({
-					FOO: '${foo}.toUpperCase()',
-					oof: '${foo}.split("").reverse().join("")'
-				});
+			t.equal( triggered, 1 );
 
-				equal( model.get( 'FOO' ), 'BAR' );
-				equal( model.get( 'oof' ), 'rab' );
+			model.set( 'foo', 'baz' );
+			t.equal( triggered, 2 );
 
-				model.on( 'change', function ( hash ) {
-					lastChange = hash;
-				});
+			model.set( 'foo', 'baz' );
+			t.equal( triggered, 2 );
 
+			model.set( 'foo', 'boo' );
+			t.equal( triggered, 3 );
+		});
+
+		test( 'Cached computed values with dependencies are triggered once for each time their dependencies are changed', function ( t ) {
+			var triggered = 0, model = new Statesman({
+				foo: 'bar'
+			});
+
+			model.compute( 'FOO', {
+				dependsOn: 'foo',
+				get: function ( foo ) {
+					triggered += 1;
+					return foo.toUpperCase();
+				},
+				cache: true
+			});
+
+			t.equal( triggered, 1 );
+
+			model.set( 'foo', 'baz' );
+			t.equal( triggered, 2 );
+
+			model.set( 'foo', 'baz' );
+			t.equal( triggered, 2 );
+
+			model.set( 'foo', 'boo' );
+			t.equal( triggered, 3 );
+		});
+
+		test( 'Computed values can have multiple dependencies', function ( t ) {
+			var result, model = new Statesman({
+				firstname: 'Henry',
+				lastname: 'Jekyll'
+			});
+
+			model.compute( 'fullname', {
+				dependsOn: [ 'firstname', 'lastname' ],
+				get: function ( firstname, lastname ) {
+					return firstname + ' ' + lastname;
+				}
+			});
+
+			model.observe( 'fullname', function ( fullname ) {
+				result = fullname;
+			});
+
+			model.set( 'lastname', 'Hyde' );
+			t.equal( result, 'Henry Hyde' );
+
+			model.set( 'firstname', 'Edward' );
+			t.equal( result, 'Edward Hyde' );
+		});
+
+		test( 'Computed values that are downstream of their dependencies do not result in infinite loops', function ( t ) {
+			var triggered = 0, model = new Statesman({
+				name: {
+					first: 'what',
+					last: 'ever'
+				}
+			});
+
+			model.observe( 'name', function () {
+				triggered += 1;
+			});
+
+			model.compute( 'name.full', {
+				dependsOn: 'name',
+				get: function ( name ) {
+					return name.first + ' ' + name.last;
+				}
+			});
+
+			t.ok( true );
+		});
+
+		test( 'Computed values are readonly by default and cannot therefore be manually set', function ( t ) {
+			var model = new Statesman();
+
+			model.debug = true;
+
+			model.compute( 'foo', {
+				get: function () {
+					return 'bar';
+				}
+			});
+
+			try {
 				model.set( 'foo', 'baz' );
-
-				deepEqual( lastChange, { FOO: 'BAZ', oof: 'zab', foo: 'baz' });
+			} catch ( err ) {
+				t.equal( err.message, 'You cannot overwrite a computed value ("foo"), unless its readonly flag is set to `false`' );
 			}
-		}
-	]
-};
+		});
+
+		test( 'Computed values can have the readonly flag set false, and can therefore be manually set', function ( t ) {
+			var model = new Statesman();
+
+			model.compute( 'foo', {
+				get: function () {
+					return 'bar';
+				},
+				readonly: false
+			});
+
+			model.set( 'foo', 'baz' );
+			t.equal( model.get( 'foo' ), 'baz' );
+		});
+
+		test( 'Computed values with dependencies can have the readonly flag set false, and can therefore be manually set', function ( t ) {
+			var model = new Statesman();
+
+			model.compute( 'foo', {
+				dependsOn: [ 'ben' ],
+				get: function () {
+					return 'bar';
+				},
+				readonly: false
+			});
+
+			model.set( 'foo', 'baz' );
+			t.equal( model.get( 'foo' ), 'baz' );
+		});
+
+		test( 'Computed values can work in both directions without infinite loops', function ( t ) {
+			var triggered = 0, model = new Statesman({
+				lower: 'foo',
+				upper: 'FOO'
+			});
+
+			model.compute( 'lower', {
+				dependsOn: 'upper',
+				get: function ( upper ) {
+					triggered += 1;
+					return upper.toLowerCase();
+				},
+				readonly: false
+			});
+
+			model.compute( 'upper', {
+				dependsOn: 'lower',
+				get: function ( lower ) {
+					return lower.toUpperCase();
+				},
+				readonly: false
+			});
+
+			model.set( 'lower', 'bar' );
+			t.equal( model.get( 'upper' ), 'BAR' );
+
+			model.set( 'upper', 'BAZ' );
+			t.equal( model.get( 'lower' ), 'baz' );
+
+			model.set( 'lower', 'Foo' );
+			t.equal( model.get( 'lower' ), 'foo' );
+		});
+
+		test( 'A computed value cannot be its own dependency', function ( t ) {
+			var model = new Statesman();
+
+			try {
+				model.compute( 'test', {
+					dependsOn: 'test',
+					get: function () {
+						// noop
+					}
+				});
+			} catch ( err ) {
+				t.equal( err.message, 'A computed value ("test") cannot depend on itself' );
+			}
+		});
+
+		test( 'Computed values overwrite existing non-computed values', function ( t ) {
+			var model = new Statesman({
+				foo: 'bar'
+			});
+
+			model.compute( 'foo', {
+				get: function () {
+					return 'baz';
+				}
+			});
+
+			t.equal( model.get( 'foo' ), 'baz' );
+		});
+
+		test( 'Multiple computed values can be set in one go - the method will return a hash of values', function ( t ) {
+			var computed, model = new Statesman();
+
+			computed = model.compute({
+				foo: {
+					get: function () { return 'bar'; }
+				},
+				bar: {
+					get: function () { return 'baz'; }
+				}
+			});
+
+			t.equal( computed.foo, 'bar' );
+			t.equal( computed.bar, 'baz' );
+
+			t.equal( model.get( 'foo' ), 'bar' );
+			t.equal( model.get( 'bar' ), 'baz' );
+		});
+
+		test( 'Computed values can be removed, and their references will be torn down', function ( t ) {
+			var model = new Statesman({
+				foo: 'bar',
+				bar: 'baz'
+			});
+
+			model.compute( 'foobar', {
+				dependsOn: [ 'foo', 'bar' ],
+				get: function ( foo, bar ) {
+					return foo + bar;
+				}
+			});
+
+			t.ok( _.isArray( model.refs.foo ) && model.refs.foo.length === 1 );
+			t.ok( _.isArray( model.refs.bar ) && model.refs.bar.length === 1 );
+			t.ok( _.isObject( model.computed.foobar ) );
+
+			model.removeComputedValue( 'foobar' );
+
+			t.ok( model.refs.foo.length === 0 );
+			t.ok( model.refs.bar.length === 0 );
+			t.ok( _.isNull( model.computed.foobar ) );
+		});
+
+		test( 'Observers of computed values will only be notified once if multiple dependencies are changed simultaneously', function ( t ) {
+			var triggered = 0, before, after, model = new Statesman({
+				firstname: 'Gisele',
+				lastname: 'Bündchen'
+			});
+
+			model.compute( 'fullname', {
+				dependsOn: [ 'firstname', 'lastname' ],
+				get: function ( firstname, lastname ) {
+					triggered += 1;
+					return firstname + ' ' + lastname;
+				}
+			});
+
+			before = triggered;
+
+			model.set({
+				firstname: 'Kate',
+				lastname: 'Moss'
+			});
+
+			after = triggered;
+
+			t.equal( after - before, 1 );
+		});
+
+		test( 'Computed values can be created using declarative syntax', function ( t ) {
+			var model = new Statesman({
+				foo: [ 1, 2, 3, 4 ]
+			});
+
+			model.compute( 'sum', '${ foo }.reduce( function ( prev, curr ) { return prev + curr });' );
+
+			t.equal( model.get( 'sum' ), 10 );
+		});
+
+		test( 'Computed values can be created using declarative syntax, using Statesman.utils', function ( t ) {
+			var model = new Statesman({
+				foo: [ 1, 2, 3, 4 ]
+			});
+
+			model.compute( 'sum', 'utils.total( ${ foo } )' );
+
+			t.equal( model.get( 'sum' ), 10 );
+		});
+
+		test( 'Compiled computed values trigger notifications when their values change', function ( t ) {
+			var finalValue, model = new Statesman({
+				foo: 2
+			});
+
+			model.compute( 'double', '2 * ${foo}' );
+
+			t.equal( model.get( 'double' ), 4 );
+
+			model.observe( 'double', function ( newValue, oldValue ) {
+				finalValue = newValue;
+			});
+
+			model.set( 'foo', 4 );
+
+			t.equal( finalValue, 8 );
+		});
+
+		test( 'Compiled computed values don\'t trigger notifications when their dependsOn change but they don\'t', function ( t ) {
+			var triggered = 0, model = new Statesman({
+				foo: 2,
+				bar: 4
+			});
+
+			model.compute( 'baz', '${foo} + ${bar}' );
+
+			t.equal( model.get( 'baz' ), 6 );
+
+			model.observe( 'baz', function ( newValue, oldValue ) {
+				triggered += 1;
+			});
+
+			t.equal( triggered, 1 ); // init
+
+			model.set({
+				foo: 3,
+				bar: 3
+			});
+
+			t.equal( triggered, 1 );
+		});
+
+		test( 'Compiled computed values only notify observers once even if multiple dependsOn change simultaneously', function ( t ) {
+			var triggered = 0, finalValue, model = new Statesman({
+				foo: 2,
+				bar: 4
+			});
+
+			model.compute( 'baz', '${foo} + ${bar}' );
+
+			t.equal( model.get( 'baz' ), 6 );
+
+			model.observe( 'baz', function ( baz ) {
+				triggered += 1;
+				finalValue = baz;
+			});
+
+			t.equal( triggered, 1 ); // init
+
+			model.set({
+				foo: 10,
+				bar: 20
+			});
+
+			t.equal( finalValue, 30 );
+			t.equal( triggered, 2 );
+		});
+
+		test( 'Multiple computed values that share a trigger are rolled into one `set` event', function ( t ) {
+			var model, lastChange;
+
+			model = new Statesman({
+				foo: 'bar'
+			});
+
+			model.compute({
+				FOO: '${foo}.toUpperCase()',
+				oof: '${foo}.split("").reverse().join("")'
+			});
+
+			t.equal( model.get( 'FOO' ), 'BAR' );
+			t.equal( model.get( 'oof' ), 'rab' );
+
+			model.on( 'change', function ( hash ) {
+				lastChange = hash;
+			});
+
+			model.set( 'foo', 'baz' );
+
+			t.deepEqual( lastChange, { FOO: 'BAZ', oof: 'zab', foo: 'baz' });
+		});
+	};
+
+});

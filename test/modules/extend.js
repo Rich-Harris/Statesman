@@ -1,162 +1,144 @@
-modules[ modules.length ] = {
-	name: 'Statesman.extend',
-	tests: [
-		{
-			title: 'Statesman.extend returns a subclass of Statesman',
-			test: function ( t ) {
-				var Subclass = Statesman.extend(), subclass = new Subclass();
+define([ 'Statesman' ], function ( Statesman ) {
 
-				t.ok( subclass instanceof Subclass );
-				t.ok( subclass instanceof Statesman );
-			}
-		},
+	'use strict';
 
-		{
-			title: 'Unadorned subclasses behave like Statesman instances',
-			test: function ( t ) {
-				var Subclass = Statesman.extend(), subclass = new Subclass();
+	window.Statesman = Statesman;
 
-				subclass.set( 'foo', 'bar' );
-				t.equal( subclass.get( 'foo' ), 'bar' );
-			}
-		},
+	return function () {
 
-		{
-			title: 'Subclass methods are applied to the prototype',
-			test: function ( t ) {
-				var subclass, Subclass = Statesman.extend({
-					hello: function () {
-						return 'world';
-					}
-				});
+		module( 'Statesman.extend' );
 
-				t.ok( typeof Subclass.prototype.hello === 'function' );
+		test( 'Statesman.extend returns a subclass of Statesman', function ( t ) {
+			var Subclass = Statesman.extend(), subclass = new Subclass();
 
-				subclass = new Subclass();
+			t.ok( subclass instanceof Subclass );
+			t.ok( subclass instanceof Statesman );
+		});
 
-				t.equal( subclass.hello(), 'world' );
-			}
-		},
+		test( 'Unadorned subclasses behave like Statesman instances', function ( t ) {
+			var Subclass = Statesman.extend(), subclass = new Subclass();
 
-		{
-			title: 'Subclass properties are applied to the prototype',
-			test: function ( t ) {
-				var subclass, Subclass = Statesman.extend({
+			subclass.set( 'foo', 'bar' );
+			t.equal( subclass.get( 'foo' ), 'bar' );
+		});
+
+		test( 'Subclass methods are applied to the prototype', function ( t ) {
+			var subclass, Subclass = Statesman.extend({
+				hello: function () {
+					return 'world';
+				}
+			});
+
+			t.ok( typeof Subclass.prototype.hello === 'function' );
+
+			subclass = new Subclass();
+
+			t.equal( subclass.hello(), 'world' );
+		});
+
+		test( 'Subclass properties are applied to the prototype', function ( t ) {
+			var subclass, Subclass = Statesman.extend({
+				foo: 'bar'
+			});
+
+			t.equal( Subclass.prototype.foo, 'bar' );
+
+			subclass = new Subclass();
+
+			t.equal( subclass.foo, 'bar' );
+		});
+
+		test( 'Subclasses can themselves be extended', function ( t ) {
+			var subSubclass, Subclass, SubSubclass;
+
+			Subclass = Statesman.extend({
+				foo: 'bar',
+
+				hello: function () {
+					return 'world';
+				}
+			});
+
+			SubSubclass = Subclass.extend({
+				bar: 'baz'
+			});
+
+			t.equal( SubSubclass.prototype.foo, 'bar' );
+			t.equal( SubSubclass.prototype.bar, 'baz' );
+			t.equal( typeof SubSubclass.prototype.hello, 'function' );
+
+			subSubclass = new SubSubclass();
+
+			t.equal( subSubclass.foo, 'bar' );
+			t.equal( subSubclass.bar, 'baz' );
+			t.equal( typeof subSubclass.hello, 'function' );
+		});
+
+		test( 'Subclasses can have default data', function ( t ) {
+			var subClass, Subclass;
+
+			Subclass = Statesman.extend({
+				data: {
 					foo: 'bar'
-				});
+				}
+			});
 
-				t.equal( Subclass.prototype.foo, 'bar' );
+			subClass = new Subclass();
 
-				subclass = new Subclass();
+			t.equal( subClass.get( 'foo' ), 'bar' );
+		});
 
-				t.equal( subclass.foo, 'bar' );
-			}
-		},
+		test( 'Subclasses can extend default data', function ( t ) {
+			var subClass, Subclass;
 
-		{
-			title: 'Subclasses can themselves be extended',
-			test: function ( t ) {
-				var subSubClass, SubClass, SubSubClass;
+			Subclass = Statesman.extend({
+				data: {
+					foo: 'bar'
+				}
+			});
 
-				Subclass = Statesman.extend({
-					foo: 'bar',
+			subClass = new Subclass({ bar: 'baz' });
 
-					hello: function () {
-						return 'world';
-					}
-				});
+			t.equal( subClass.get( 'foo' ), 'bar' );
+			t.equal( subClass.get( 'bar' ), 'baz' );
+		});
 
-				SubSubClass = Subclass.extend({
+		test( 'Subclass data can be extended', function ( t ) {
+			var subSubclass, Subclass, SubSubclass;
+
+			Subclass = Statesman.extend({
+				data: {
+					foo: 'bar'
+				}
+			});
+
+			SubSubclass = Subclass.extend({
+				data: {
 					bar: 'baz'
-				});
+				}
+			});
 
-				t.equal( SubSubClass.prototype.foo, 'bar' );
-				t.equal( SubSubClass.prototype.bar, 'baz' );
-				t.equal( typeof SubSubClass.prototype.hello, 'function' );
+			subSubclass = new SubSubclass({ baz: 'foo' });
 
-				subSubClass = new SubSubClass();
+			t.equal( subSubclass.get( 'foo' ), 'bar' );
+			t.equal( subSubclass.get( 'bar' ), 'baz' );
+			t.equal( subSubclass.get( 'baz' ), 'foo' );
+		});
 
-				t.equal( subSubClass.foo, 'bar' );
-				t.equal( subSubClass.bar, 'baz' );
-				t.equal( typeof subSubClass.hello, 'function' );
-			}
-		},
+		test( 'Subclasses can have default computed values', function ( t ) {
+			var subClass, Subclass;
 
-		{
-			title: 'Subclasses can have default data',
-			test: function ( t ) {
-				var subClass, Subclass;
+			Subclass = Statesman.extend({
+				computed: {
+					FOO: '${foo}.toUpperCase()'
+				}
+			});
 
-				SubClass = Statesman.extend({
-					data: {
-						foo: 'bar'
-					}
-				});
+			subClass = new Subclass({ foo: 'bar' });
 
-				subClass = new SubClass();
+			t.equal( subClass.get( 'FOO' ), 'BAR' );
+		});
 
-				t.equal( subClass.get( 'foo' ), 'bar' );
-			}
-		},
+	};
 
-		{
-			title: 'Subclasses can extend default data',
-			test: function ( t ) {
-				var subClass, Subclass;
-
-				SubClass = Statesman.extend({
-					data: {
-						foo: 'bar'
-					}
-				});
-
-				subClass = new SubClass({ bar: 'baz' });
-
-				t.equal( subClass.get( 'foo' ), 'bar' );
-				t.equal( subClass.get( 'bar' ), 'baz' );
-			}
-		},
-
-		{
-			title: 'Subclass data can be extended',
-			test: function ( t ) {
-				var subSubClass, Subclass, SubSubClass;
-
-				SubClass = Statesman.extend({
-					data: {
-						foo: 'bar'
-					}
-				});
-
-				SubSubClass = SubClass.extend({
-					data: {
-						bar: 'baz'
-					}
-				});
-
-				subSubClass = new SubSubClass({ baz: 'foo' });
-
-				t.equal( subSubClass.get( 'foo' ), 'bar' );
-				t.equal( subSubClass.get( 'bar' ), 'baz' );
-				t.equal( subSubClass.get( 'baz' ), 'foo' );
-			}
-		},
-
-		{
-			title: 'Subclasses can have default computed values',
-			test: function ( t ) {
-				var subClass, SubClass;
-
-				SubClass = Statesman.extend({
-					computed: {
-						FOO: '${foo}.toUpperCase()'
-					}
-				});
-
-				subClass = new SubClass({ foo: 'bar' });
-
-				t.equal( subClass.get( 'FOO' ), 'BAR' );
-			}
-		}
-	]
-};
+});
