@@ -6,6 +6,32 @@ var circular = function () {
         
         return [];
     }();
+var utils_create = function () {
+        
+        var create;
+        try {
+            Object.create(null);
+            create = Object.create;
+        } catch (err) {
+            create = function () {
+                var F = function () {
+                };
+                return function (proto, props) {
+                    var obj;
+                    if (proto === null) {
+                        return {};
+                    }
+                    F.prototype = proto;
+                    obj = new F();
+                    if (props) {
+                        Object.defineProperties(obj, props);
+                    }
+                    return obj;
+                };
+            }();
+        }
+        return create;
+    }();
 var utils_defineProperty = function () {
         
         if (Object.defineProperty) {
@@ -137,18 +163,18 @@ var Statesman_prototype_compute_validate = function () {
 var Statesman_prototype_shared_registerDependant = function () {
         
         return function (dependant, isReference) {
-            var statesman, keypath, deps, keys, parentKeypath, map, baseDeps, baseMap;
+            var statesman, keypath, dependants, keys, parentKeypath, map, baseDeps, baseMap;
             statesman = dependant.statesman;
             keypath = dependant.keypath;
             if (isReference) {
-                baseDeps = statesman.refs;
-                baseMap = statesman.refsMap;
+                baseDeps = statesman.references;
+                baseMap = statesman.referencesMap;
             } else {
-                baseDeps = statesman.deps;
-                baseMap = statesman.depsMap;
+                baseDeps = statesman.observers;
+                baseMap = statesman.observersMap;
             }
-            deps = baseDeps[keypath] || (baseDeps[keypath] = []);
-            deps[deps.length] = dependant;
+            dependants = baseDeps[keypath] || (baseDeps[keypath] = []);
+            dependants[dependants.length] = dependant;
             keys = keypath.split('.');
             while (keys.length) {
                 keys.pop();
@@ -166,18 +192,18 @@ var Statesman_prototype_shared_registerDependant = function () {
 var Statesman_prototype_shared_unregisterDependant = function () {
         
         return function (dependant, isReference) {
-            var statesman, keypath, deps, keys, parentKeypath, map, baseDeps, baseMap;
+            var statesman, keypath, dependants, keys, parentKeypath, map, baseDeps, baseMap;
             statesman = dependant.statesman;
             keypath = dependant.keypath;
             if (isReference) {
-                baseDeps = statesman.refs;
-                baseMap = statesman.refsMap;
+                baseDeps = statesman.references;
+                baseMap = statesman.referencesMap;
             } else {
-                baseDeps = statesman.deps;
-                baseMap = statesman.depsMap;
+                baseDeps = statesman.observers;
+                baseMap = statesman.observersMap;
             }
-            deps = baseDeps[keypath];
-            deps.splice(deps.indexOf(dependant), 1);
+            dependants = baseDeps[keypath];
+            dependants.splice(dependants.indexOf(dependant), 1);
             keys = keypath.split('.');
             while (keys.length) {
                 keys.pop();
@@ -194,9 +220,9 @@ var Statesman_prototype_shared_unregisterDependant = function () {
     }();
 var Statesman_prototype_compute_Reference = function (isEqual, registerDependant, unregisterDependant) {
         
-        var Reference = function (computed, keypath) {
-            this.computed = computed;
-            this.statesman = computed.statesman;
+        var Reference = function (computation, keypath) {
+            this.computation = computation;
+            this.statesman = computation.statesman;
             this.keypath = keypath;
             this.value = this.statesman.get(keypath);
             registerDependant(this, true);
@@ -207,7 +233,7 @@ var Statesman_prototype_compute_Reference = function (isEqual, registerDependant
                 value = this.statesman.get(this.keypath);
                 if (!isEqual(value, this.value)) {
                     this.value = value;
-                    this.computed.bubble();
+                    this.computation.bubble();
                 }
             },
             teardown: function () {
@@ -216,16 +242,16 @@ var Statesman_prototype_compute_Reference = function (isEqual, registerDependant
         };
         return Reference;
     }(Statesman_prototype_shared_isEqual, Statesman_prototype_shared_registerDependant, Statesman_prototype_shared_unregisterDependant);
-var Statesman_prototype_compute_Computed = function (isEqual, compile, validate, Reference) {
+var Statesman_prototype_compute_Computation = function (isEqual, compile, validate, Reference) {
         
-        var Computed = function (statesman, keypath, signature) {
+        var Computation = function (statesman, keypath, signature) {
             var i;
-            if (statesman.computed[keypath]) {
-                statesman.computed[keypath].teardown();
+            if (statesman.computations[keypath]) {
+                statesman.computations[keypath].teardown();
             }
             this.statesman = statesman;
             this.keypath = keypath;
-            statesman.computed[keypath] = this;
+            statesman.computations[keypath] = this;
             if (typeof signature === 'string') {
                 signature = compile(signature, statesman);
             } else {
@@ -252,14 +278,18 @@ var Statesman_prototype_compute_Computed = function (isEqual, compile, validate,
             statesman.set(this.keypath, this.value = this.getter());
             this.setting = false;
         };
-        Computed.prototype = {
+        Computation.prototype = {
             bubble: function () {
                 if (this.selfUpdating) {
                     this.update();
                 } else if (!this.deferred) {
-                    this.statesman.deferred.push(this);
+                    this.statesman.deferredComputations.push(this);
                     this.deferred = true;
                 }
+            },
+            deferredUpdate: function () {
+                this.update();
+                this.deferred = false;
             },
             update: function () {
                 var value;
@@ -351,30 +381,30 @@ var Statesman_prototype_compute_Computed = function (isEqual, compile, validate,
             teardown: function () {
                 while (this.refs.length) {
                     this.refs.pop().teardown();
-                    this.statesman.computed[this.keypath] = null;
+                    this.statesman.computations[this.keypath] = null;
                 }
             }
         };
-        return Computed;
+        return Computation;
     }(Statesman_prototype_shared_isEqual, Statesman_prototype_compute_compile, Statesman_prototype_compute_validate, Statesman_prototype_compute_Reference);
-var Statesman_prototype_compute__compute = function (Computed) {
+var Statesman_prototype_compute__compute = function (Computation) {
         
         return function (keypath, signature) {
-            var result, k, computed;
+            var result, k, computation;
             if (typeof keypath === 'object') {
                 result = {};
                 for (k in keypath) {
                     if (keypath.hasOwnProperty(k)) {
-                        computed = new Computed(this, k, keypath[k]);
-                        result[k] = computed.value;
+                        computation = new Computation(this, k, keypath[k]);
+                        result[k] = computation.value;
                     }
                 }
                 return result;
             }
-            computed = new Computed(this, keypath, signature);
-            return computed.value;
+            computation = new Computation(this, keypath, signature);
+            return computation.value;
         };
-    }(Statesman_prototype_compute_Computed);
+    }(Statesman_prototype_compute_Computation);
 var Statesman_prototype_fire = function () {
         
         return function (eventName) {
@@ -400,17 +430,17 @@ var Statesman_prototype_shared_normalise = function () {
 var Statesman_prototype_shared_get = function () {
         
         return function get(statesman, keypath, keys, forceCache) {
-            var computed, lastKey, parentKeypath, parentValue, value;
+            var computation, lastKey, parentKeypath, parentValue, value;
             if (!keypath) {
                 return statesman.data;
             }
-            if (computed = statesman.computed[keypath]) {
-                if (!forceCache && !computed.cache && !computed.override) {
-                    statesman.cache[keypath] = computed.getter();
+            if (computation = statesman.computations[keypath]) {
+                if (!forceCache && !computation.cache && !computation.override) {
+                    statesman.cache[keypath] = computation.getter();
                 }
             }
-            if (statesman.cache.hasOwnProperty(keypath)) {
-                return statesman.cache[keypath];
+            if ((value = statesman.cache[keypath]) !== undefined) {
+                return value;
             }
             keys = keys || keypath.split('.');
             lastKey = keys.pop();
@@ -610,58 +640,60 @@ var Statesman_prototype_once = function () {
 var Statesman_prototype_removeComputedValue = function () {
         
         return function (keypath) {
-            if (this.computed[keypath]) {
-                this.computed[keypath].teardown();
+            var computation;
+            if (computation = this.computations[keypath]) {
+                computation.teardown();
             }
             return this;
         };
     }();
-var Statesman_prototype_shared_notifyObservers = function () {
+var Statesman_prototype_shared_flush = function () {
         
-        var notifyObservers = function (statesman, keypath, directOnly) {
-            var deps, i, map;
-            deps = statesman.deps[keypath];
-            if (deps) {
-                i = deps.length;
+        var flush = function (statesman, keypath, computations, directOnly) {
+            var dependants, i, map;
+            dependants = computations ? statesman.references[keypath] : statesman.observers[keypath];
+            if (dependants) {
+                i = dependants.length;
                 while (i--) {
-                    deps[i].update();
+                    dependants[i].update();
                 }
             }
             if (directOnly) {
                 return;
             }
-            map = statesman.depsMap[keypath];
+            map = computations ? statesman.referencesMap[keypath] : statesman.observersMap[keypath];
             if (map) {
                 i = map.length;
                 while (i--) {
-                    notifyObservers(statesman, map[i]);
+                    flush(statesman, map[i], computations);
                 }
             }
         };
-        notifyObservers.multiple = function (statesman, keypaths, directOnly) {
+        flush.all = function (statesman, keypaths, computations, directOnly) {
             var i;
             i = keypaths.length;
             while (i--) {
-                notifyObservers(statesman, keypaths[i], directOnly);
+                flush(statesman, keypaths[i], computations, directOnly);
             }
         };
-        return notifyObservers;
+        return flush;
     }();
-var Statesman_prototype_reset = function (notifyObservers) {
+var Statesman_prototype_reset = function (flush) {
         
         return function (data) {
             this.data = {};
             this.set(data, { silent: true });
             this.fire('reset');
-            notifyObservers(this, '');
+            flush(this, '', true, false);
+            flush(this, '', false, false);
             return this;
         };
-    }(Statesman_prototype_shared_notifyObservers);
+    }(Statesman_prototype_shared_flush);
 var Statesman_prototype_shared_clearCache = function () {
         
         return function clearCache(statesman, keypath) {
             var children = statesman.cacheMap[keypath];
-            delete statesman.cache[keypath];
+            statesman.cache[keypath] = undefined;
             if (!children) {
                 return;
             }
@@ -688,9 +720,9 @@ var Statesman_prototype_set_updateModel = function () {
 var Statesman_prototype_set_set = function (get, clearCache, updateModel) {
         
         return function (statesman, keypath, value) {
-            var previous, keys, computed;
-            if ((computed = statesman.computed[keypath]) && !computed.setting) {
-                computed.setter(value);
+            var previous, computation;
+            if ((computation = statesman.computations[keypath]) && !computation.setting) {
+                computation.setter(value);
                 return;
             }
             previous = get(statesman, keypath, null, true);
@@ -702,90 +734,20 @@ var Statesman_prototype_set_set = function (get, clearCache, updateModel) {
                 }
             }
             clearCache(statesman, keypath);
-            statesman.changes[statesman.changes.length] = keypath;
+            statesman.changes.push(keypath);
             statesman.changeHash[keypath] = value;
-            keys = keypath.split('.');
-            while (keys.length) {
-                keys.pop();
-                keypath = keys.join('.');
-                if (statesman.upstreamChanges[keypath]) {
-                    break;
-                }
-                statesman.upstreamChanges[keypath] = true;
-                statesman.upstreamChanges.push(keypath);
-            }
         };
     }(Statesman_prototype_shared_get, Statesman_prototype_shared_clearCache, Statesman_prototype_set_updateModel);
-var Statesman_prototype_set_propagateChanges = function () {
+var Statesman_prototype_set__set = function (flush, normalise, set) {
         
-        return function (statesman) {
-            var i, changes, upstreamChanges, keypath, computed;
-            changes = statesman.changes;
-            upstreamChanges = statesman.upstreamChanges;
-            statesman.changes = [];
-            statesman.upstreamChanges = [];
-            i = upstreamChanges.length;
-            while (i--) {
-                keypath = upstreamChanges[i];
-                propagateChange(statesman, keypath, true);
-            }
-            i = changes.length;
-            while (i--) {
-                keypath = changes[i];
-                propagateChange(statesman, keypath);
-            }
-            while (statesman.deferred.length) {
-                computed = statesman.deferred.pop();
-                computed.update();
-                computed.deferred = false;
-            }
-        };
-        function propagateChange(statesman, keypath, directOnly) {
-            var refs, map, i;
-            refs = statesman.refs[keypath];
-            if (refs) {
-                i = refs.length;
-                while (i--) {
-                    refs[i].update();
-                }
-            }
-            if (directOnly) {
-                return;
-            }
-            map = statesman.refsMap[keypath];
-            if (map) {
-                i = map.length;
-                while (i--) {
-                    propagateChange(statesman, map[i]);
-                }
-            }
-        }
-    }();
-var Statesman_prototype_set_mergeChanges = function () {
-        
-        return function (current, extra) {
-            var i = extra.length, keypath;
-            while (i--) {
-                keypath = extra[i];
-                if (!current['_' + keypath]) {
-                    current['_' + keypath] = true;
-                    current[current.length] = keypath;
-                }
-            }
-        };
-    }();
-var Statesman_prototype_set__set = function (notifyObservers, normalise, set, propagateChanges, mergeChanges) {
-        
-        return function (keypath, value, options) {
-            var allChanges, allUpstreamChanges, k, normalised, existingChangeHash;
-            this.changes = [];
-            this.upstreamChanges = [];
-            existingChangeHash = this.changeHash;
-            if (!existingChangeHash) {
-                this.changeHash = existingChangeHash || {};
+        return function (keypath, value) {
+            var changes, upstreamChanges, k, normalised, topLevel, allChanges, observersToNotify, deferredComputations, computation;
+            if (!this.changeHash) {
+                this.changes = [];
+                this.changeHash = {};
+                topLevel = true;
             }
             if (typeof keypath === 'object') {
-                options = value;
                 for (k in keypath) {
                     if (keypath.hasOwnProperty(k)) {
                         normalised = normalise(k);
@@ -797,27 +759,53 @@ var Statesman_prototype_set__set = function (notifyObservers, normalise, set, pr
                 normalised = normalise(keypath);
                 set(this, normalised, value);
             }
+            if (!topLevel) {
+                return;
+            }
             allChanges = [];
-            allUpstreamChanges = [];
             while (this.changes.length) {
-                mergeChanges(allChanges, this.changes);
-                mergeChanges(allUpstreamChanges, this.upstreamChanges);
-                propagateChanges(this);
+                observersToNotify = [];
+                while (this.changes.length) {
+                    changes = this.changes.splice(0);
+                    upstreamChanges = getUpstreamChanges(changes);
+                    flush.all(this, upstreamChanges, true, true);
+                    flush.all(this, changes, true, false);
+                    allChanges = allChanges.concat(changes);
+                    observersToNotify = observersToNotify.concat(changes);
+                    while (this.deferredComputations.length) {
+                        deferredComputations = this.deferredComputations.splice(0);
+                        while (computation = deferredComputations.pop()) {
+                            computation.deferredUpdate();
+                        }
+                    }
+                }
+                flush.all(this, getUpstreamChanges(observersToNotify), false, true);
+                flush.all(this, observersToNotify, false, false);
             }
-            if (options && options.silent) {
-                return this;
-            }
-            notifyObservers.multiple(this, allUpstreamChanges, true);
             if (allChanges.length) {
-                notifyObservers.multiple(this, allChanges);
-            }
-            if (allChanges.length && !existingChangeHash) {
                 this.fire('change', this.changeHash);
             }
-            this.changeHash = existingChangeHash;
+            this.changes = this.changeHash = null;
             return this;
         };
-    }(Statesman_prototype_shared_notifyObservers, Statesman_prototype_shared_normalise, Statesman_prototype_set_set, Statesman_prototype_set_propagateChanges, Statesman_prototype_set_mergeChanges);
+        function getUpstreamChanges(changes) {
+            var upstreamChanges = [''], i, keypath, keys, upstreamKeypath;
+            i = changes.length;
+            while (i--) {
+                keypath = changes[i];
+                keys = keypath.split('.');
+                while (keys.length > 1) {
+                    keys.pop();
+                    upstreamKeypath = keys.join('.');
+                    if (!upstreamChanges[upstreamKeypath]) {
+                        upstreamChanges[upstreamChanges.length] = upstreamKeypath;
+                        upstreamChanges[upstreamKeypath] = true;
+                    }
+                }
+            }
+            return upstreamChanges;
+        }
+    }(Statesman_prototype_shared_flush, Statesman_prototype_shared_normalise, Statesman_prototype_set_set);
 var Statesman_prototype_subset_Subset_prototype_add = function () {
         
         return function (keypath, d) {
@@ -1033,57 +1021,29 @@ var Statesman_prototype_toggle = function () {
             this.set(keypath, !this.get(keypath));
         };
     }();
-var Statesman_prototype_unobserve = function (normalise, Observer) {
+var Statesman_prototype_unobserve = function (normalise) {
         
         return function (keypath) {
-            var deps, i;
+            var observers, i;
             keypath = keypath === undefined ? '' : normalise(keypath);
-            deps = this.deps[keypath];
-            if (!deps) {
+            observers = this.observers[keypath];
+            if (!observers) {
                 return;
             }
-            i = deps.length;
+            i = observers.length;
             while (i--) {
-                if (deps[i] instanceof Observer) {
-                    deps[i].teardown();
-                }
+                observers[i].teardown();
             }
         };
-    }(Statesman_prototype_shared_normalise, Statesman_prototype_shared_Observer);
+    }(Statesman_prototype_shared_normalise);
 var Statesman_prototype_unobserveAll = function () {
         
         return function () {
             var keypath;
-            for (keypath in this.deps) {
+            for (keypath in this.observers) {
                 this.unobserve(keypath);
             }
         };
-    }();
-var utils_create = function () {
-        
-        var create;
-        try {
-            Object.create(null);
-            create = Object.create;
-        } catch (err) {
-            create = function () {
-                var F = function () {
-                };
-                return function (proto, props) {
-                    var obj;
-                    if (proto === null) {
-                        return {};
-                    }
-                    F.prototype = proto;
-                    obj = new F();
-                    if (props) {
-                        Object.defineProperties(obj, props);
-                    }
-                    return obj;
-                };
-            }();
-        }
-        return create;
     }();
 var utils_clone = function () {
         
@@ -1208,7 +1168,7 @@ var Statesman_extend__extend = function (circular, create, initChildInstance, in
             return Child;
         };
     }(circular, utils_create, Statesman_extend_initChildInstance, Statesman_extend_inheritFromParent, Statesman_extend_inheritFromChildProps);
-var Statesman__Statesman = function (circular, defineProperties, add, compute, fire, get, observe, off, on, once, removeComputedValue, reset, set, subset, subtract, toggle, unobserve, unobserveAll, extend) {
+var Statesman__Statesman = function (circular, create, defineProperties, add, compute, fire, get, observe, off, on, once, removeComputedValue, reset, set, subset, subtract, toggle, unobserve, unobserveAll, extend) {
         
         var Statesman = function (data) {
             defineProperties(this, {
@@ -1217,18 +1177,18 @@ var Statesman__Statesman = function (circular, defineProperties, add, compute, f
                     writable: true
                 },
                 subs: {
-                    value: {},
+                    value: create(null),
                     writable: true
                 },
-                cache: { value: {} },
-                cacheMap: { value: {} },
-                deps: { value: {} },
-                depsMap: { value: {} },
-                refs: { value: {} },
-                refsMap: { value: {} },
-                computed: { value: {} },
-                subsets: { value: {} },
-                deferred: { value: [] },
+                cache: { value: create(null) },
+                cacheMap: { value: create(null) },
+                observers: { value: create(null) },
+                observersMap: { value: create(null) },
+                references: { value: create(null) },
+                referencesMap: { value: create(null) },
+                computations: { value: create(null) },
+                subsets: { value: create(null) },
+                deferredComputations: { value: [] },
                 changes: {
                     value: null,
                     writable: true
@@ -1265,7 +1225,7 @@ var Statesman__Statesman = function (circular, defineProperties, add, compute, f
         Statesman.extend = extend;
         circular.Statesman = Statesman;
         return Statesman;
-    }(circular, utils_defineProperties, Statesman_prototype_add, Statesman_prototype_compute__compute, Statesman_prototype_fire, Statesman_prototype_get, Statesman_prototype_observe__observe, Statesman_prototype_off, Statesman_prototype_on, Statesman_prototype_once, Statesman_prototype_removeComputedValue, Statesman_prototype_reset, Statesman_prototype_set__set, Statesman_prototype_subset__subset, Statesman_prototype_subtract, Statesman_prototype_toggle, Statesman_prototype_unobserve, Statesman_prototype_unobserveAll, Statesman_extend__extend);
+    }(circular, utils_create, utils_defineProperties, Statesman_prototype_add, Statesman_prototype_compute__compute, Statesman_prototype_fire, Statesman_prototype_get, Statesman_prototype_observe__observe, Statesman_prototype_off, Statesman_prototype_on, Statesman_prototype_once, Statesman_prototype_removeComputedValue, Statesman_prototype_reset, Statesman_prototype_set__set, Statesman_prototype_subset__subset, Statesman_prototype_subtract, Statesman_prototype_toggle, Statesman_prototype_unobserve, Statesman_prototype_unobserveAll, Statesman_extend__extend);
 var Statesman = function (Statesman, circular) {
         
         if (!Array.prototype.indexOf) {
