@@ -1,29 +1,25 @@
 define([
-	'Statesman/prototype/shared/normalise',
-	'Statesman/prototype/shared/Observer'
+	'Statesman/prototype/shared/normalise'
 ], function (
-	normalise,
-	Observer
+	normalise
 ) {
 
 	'use strict';
 
 	return function ( keypath ) {
-		var deps, i;
+		var observers, i;
 
 		keypath = ( keypath === undefined ? '' : normalise( keypath ) );
 
-		deps = this.deps[ keypath ];
+		observers = this.observers[ keypath ];
 
-		if ( !deps ) {
+		if ( !observers ) {
 			return;
 		}
 
-		i = deps.length;
+		i = observers.length;
 		while ( i-- ) {
-			if ( deps[i] instanceof Observer ) {
-				deps[i].teardown();
-			}
+			observers[i].teardown();
 		}
 	};
 

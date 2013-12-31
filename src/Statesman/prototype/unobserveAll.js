@@ -5,7 +5,7 @@ define( function () {
 	return function () {
 		var keypath;
 
-		for ( keypath in this.deps ) {
+		for ( keypath in this.observers ) {
 			this.unobserve( keypath );
 		}
 	};

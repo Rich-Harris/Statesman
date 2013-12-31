@@ -5,8 +5,7 @@ define( function () {
 	return function clearCache ( statesman, keypath ) {
 		var children = statesman.cacheMap[ keypath ];
 
-		// TODO
-		delete statesman.cache[ keypath ];
+		statesman.cache[ keypath ] = undefined;
 
 		if ( !children ) {
 			return;

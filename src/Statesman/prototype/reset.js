@@ -1,7 +1,7 @@
 define([
-	'Statesman/prototype/shared/notifyObservers'
+	'Statesman/prototype/shared/flush'
 ], function (
-	notifyObservers
+	flush
 ) {
 
 	'use strict';
@@ -14,7 +14,8 @@ define([
 		this.set( data, { silent: true });
 		this.fire( 'reset' );
 
-		notifyObservers( this, '' );
+		flush( this, '', true, false );
+		flush( this, '', false, false );
 
 		return this;
 	};

@@ -10,9 +10,9 @@ define([
 
 	'use strict';
 
-	var Reference = function ( computed, keypath ) {
-		this.computed = computed;
-		this.statesman = computed.statesman;
+	var Reference = function ( computation, keypath ) {
+		this.computation = computation;
+		this.statesman = computation.statesman;
 		this.keypath = keypath;
 
 		this.value = this.statesman.get( keypath );
@@ -28,7 +28,7 @@ define([
 
 			if ( !isEqual( value, this.value ) ) {
 				this.value = value;
-				this.computed.bubble();
+				this.computation.bubble();
 			}
 		},
 

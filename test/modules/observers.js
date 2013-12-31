@@ -8,14 +8,14 @@ define([ 'Statesman' ], function ( Statesman ) {
 
 		module( 'Observers' );
 
-		test( 'Observing "foo" adds a dependant to state.deps.foo', function ( t ) {
+		test( 'Observing "foo" adds a dependant to state.observers.foo', function ( t ) {
 			var state = new Statesman(), callback = function () {}, observer;
 
 			state.observe( 'foo', callback );
-			ok( _.isArray( state.deps.foo ) );
-			ok( _.isObject( state.deps.foo[0] ) );
+			ok( _.isArray( state.observers.foo ) );
+			ok( _.isObject( state.observers.foo[0] ) );
 
-			observer = state.deps.foo[0];
+			observer = state.observers.foo[0];
 
 			equal( callback, observer.callback );
 		});
@@ -29,17 +29,6 @@ define([ 'Statesman' ], function ( Statesman ) {
 
 			state.set( 'foo', 'bar' );
 			equal( value, 'bar' );
-		});
-
-		test( 'Observing "foo", then setting "foo" silently, does not trigger the callback', function ( t ) {
-			var state = new Statesman(), value;
-
-			state.observe( 'foo', function ( val ) {
-				value = val;
-			});
-
-			state.set( 'foo', 'bar', { silent: true });
-			equal( value, undefined );
 		});
 
 		test( 'Observers can be cancelled', function ( t ) {

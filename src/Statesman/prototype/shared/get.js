@@ -7,23 +7,23 @@ define([
 	'use strict';
 
 	return function get ( statesman, keypath, keys, forceCache ) {
-		var computed, lastKey, parentKeypath, parentValue, value;
+		var computation, lastKey, parentKeypath, parentValue, value;
 
 		if ( !keypath ) {
 			return statesman.data;
 		}
 
-		// if this is a non-cached computed value, compute it, unless we
+		// if this is a non-cached computation, compute it, unless we
 		// specifically want the cached value
-		if ( computed = statesman.computed[ keypath ] ) {
-			if ( !forceCache && !computed.cache && !computed.override ) {
-				statesman.cache[ keypath ] = computed.getter();
+		if ( computation = statesman.computations[ keypath ] ) {
+			if ( !forceCache && !computation.cache && !computation.override ) {
+				statesman.cache[ keypath ] = computation.getter();
 			}
 		}
 
 		// cache hit?
-		if ( statesman.cache.hasOwnProperty( keypath ) ) {
-			return statesman.cache[ keypath ];
+		if ( ( value = statesman.cache[ keypath ] ) !== undefined ) {
+			return value;
 		}
 
 		keys = keys || keypath.split( '.' );

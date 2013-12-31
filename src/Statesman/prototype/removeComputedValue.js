@@ -3,8 +3,10 @@ define( function () {
 	'use strict';
 
 	return function ( keypath ) {
-		if ( this.computed[ keypath ] ) {
-			this.computed[ keypath ].teardown();
+		var computation;
+
+		if ( computation = this.computations[ keypath ] ) {
+			computation.teardown();
 		}
 
 		return this;

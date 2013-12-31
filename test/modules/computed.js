@@ -421,9 +421,9 @@ define([ 'Statesman' ], function ( Statesman ) {
 		});
 
 		test( 'Multiple computed values can be set in one go - the method will return a hash of values', function ( t ) {
-			var computed, model = new Statesman();
+			var computation, model = new Statesman();
 
-			computed = model.compute({
+			computation = model.compute({
 				foo: {
 					get: function () { return 'bar'; }
 				},
@@ -432,8 +432,8 @@ define([ 'Statesman' ], function ( Statesman ) {
 				}
 			});
 
-			t.equal( computed.foo, 'bar' );
-			t.equal( computed.bar, 'baz' );
+			t.equal( computation.foo, 'bar' );
+			t.equal( computation.bar, 'baz' );
 
 			t.equal( model.get( 'foo' ), 'bar' );
 			t.equal( model.get( 'bar' ), 'baz' );
@@ -452,15 +452,15 @@ define([ 'Statesman' ], function ( Statesman ) {
 				}
 			});
 
-			t.ok( _.isArray( model.refs.foo ) && model.refs.foo.length === 1 );
-			t.ok( _.isArray( model.refs.bar ) && model.refs.bar.length === 1 );
-			t.ok( _.isObject( model.computed.foobar ) );
+			t.ok( _.isArray( model.references.foo ) && model.references.foo.length === 1 );
+			t.ok( _.isArray( model.references.bar ) && model.references.bar.length === 1 );
+			t.ok( _.isObject( model.computations.foobar ) );
 
 			model.removeComputedValue( 'foobar' );
 
-			t.ok( model.refs.foo.length === 0 );
-			t.ok( model.refs.bar.length === 0 );
-			t.ok( _.isNull( model.computed.foobar ) );
+			t.ok( model.references.foo.length === 0 );
+			t.ok( model.references.bar.length === 0 );
+			t.ok( _.isNull( model.computations.foobar ) );
 		});
 
 		test( 'Observers of computed values will only be notified once if multiple dependencies are changed simultaneously', function ( t ) {
@@ -577,7 +577,7 @@ define([ 'Statesman' ], function ( Statesman ) {
 			t.equal( triggered, 2 );
 		});
 
-		test( 'Multiple computed values that share a trigger are rolled into one `set` event', function ( t ) {
+		test( 'Multiple computed values that share a trigger are rolled into one `change` event', function ( t ) {
 			var model, lastChange;
 
 			model = new Statesman({
@@ -599,6 +599,40 @@ define([ 'Statesman' ], function ( Statesman ) {
 			model.set( 'foo', 'baz' );
 
 			t.deepEqual( lastChange, { FOO: 'BAZ', oof: 'zab', foo: 'baz' });
+		});
+
+		test( 'Computations with multiple dependencies are only run once if those dependencies change simultaneously', function ( t ) {
+			var model, computation, secondRun;
+
+			model = new Statesman({
+				a: 1,
+				b: 2
+			});
+
+			expect( 4 );
+
+			model.compute( 'c', {
+				dependsOn: [ 'a', 'b' ],
+				get: function ( a, b ) {
+					if ( secondRun ) {
+						t.equal( a, 2 );
+						t.equal( b, 4 );
+					}
+
+					return a + b;
+				}
+			});
+			t.equal( model.get( 'c' ), 3 );
+
+			model.on( 'change', function ( changes ) {
+				t.deepEqual( changes, { a: 2, b: 4, c: 6 });
+			});
+			secondRun = true;
+
+			model.set({
+				a: 2,
+				b: 4
+			});
 		});
 	};
 

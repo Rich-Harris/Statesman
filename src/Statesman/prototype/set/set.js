@@ -11,12 +11,12 @@ define([
 	'use strict';
 
 	return function ( statesman, keypath, value ) {
-		var previous, keys, computed;
+		var previous, computation;
 
 		// if this is a computed value, make sure it has a setter or can be
 		// overridden. Unless it called set itself
-		if ( ( computed = statesman.computed[ keypath ] ) && !computed.setting ) {
-			computed.setter( value );
+		if ( ( computation = statesman.computations[ keypath ] ) && !computation.setting ) {
+			computation.setter( value );
 			return;
 		}
 
@@ -39,22 +39,8 @@ define([
 		clearCache( statesman, keypath );
 
 		// add this keypath to the notification queue
-		statesman.changes[ statesman.changes.length ] = keypath;
+		statesman.changes.push( keypath );
 		statesman.changeHash[ keypath ] = value;
-
-		// add upstream changes
-		keys = keypath.split( '.' );
-		while ( keys.length ) {
-			keys.pop();
-			keypath = keys.join( '.' );
-
-			if ( statesman.upstreamChanges[ keypath ] ) {
-				break; // all upstream keypaths will have already been added
-			}
-
-			statesman.upstreamChanges[ keypath ] = true;
-			statesman.upstreamChanges.push( keypath );
-		}
 
 	};
 

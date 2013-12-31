@@ -12,19 +12,19 @@ define([
 
 	'use strict';
 
-	var Computed = function ( statesman, keypath, signature ) {
+	var Computation = function ( statesman, keypath, signature ) {
 
 		var i;
 
 		// teardown any existing computed values on this keypath
-		if ( statesman.computed[ keypath ] ) {
-			statesman.computed[ keypath ].teardown();
+		if ( statesman.computations[ keypath ] ) {
+			statesman.computations[ keypath ].teardown();
 		}
 
 		this.statesman = statesman;
 		this.keypath = keypath;
 
-		statesman.computed[ keypath ] = this;
+		statesman.computations[ keypath ] = this;
 
 		// if we were given a string, we need to compile it
 		if ( typeof signature === 'string' ) {
@@ -50,7 +50,7 @@ define([
 
 		i = signature.dependsOn.length;
 
-		// if this is a cacheable computed, we update proactively
+		// if this is a cacheable computation, we update proactively
 		if ( this.cache ) {
 
 			// if we only have one dependency, we can update whenever it changes
@@ -68,16 +68,21 @@ define([
 		this.setting = false;
 	};
 
-	Computed.prototype = {
+	Computation.prototype = {
 		bubble: function () {
 			if ( this.selfUpdating ) {
 				this.update();
 			}
 
 			else if ( !this.deferred ) {
-				this.statesman.deferred.push( this );
+				this.statesman.deferredComputations.push( this );
 				this.deferred = true;
 			}
+		},
+
+		deferredUpdate: function () {
+			this.update();
+			this.deferred = false;
 		},
 
 		update: function () {
@@ -217,11 +222,11 @@ define([
 		teardown: function () {
 			while ( this.refs.length ) {
 				this.refs.pop().teardown();
-				this.statesman.computed[ this.keypath ] = null;
+				this.statesman.computations[ this.keypath ] = null;
 			}
 		}
 	};
 
-	return Computed;
+	return Computation;
 
 });

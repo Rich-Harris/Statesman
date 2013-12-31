@@ -4,21 +4,21 @@ define( function () {
 
 	return function ( dependant, isReference ) {
 
-		var statesman, keypath, deps, keys, parentKeypath, map, baseDeps, baseMap;
+		var statesman, keypath, dependants, keys, parentKeypath, map, baseDeps, baseMap;
 
 		statesman = dependant.statesman;
 		keypath = dependant.keypath;
 
 		if ( isReference ) {
-			baseDeps = statesman.refs;
-			baseMap = statesman.refsMap;
+			baseDeps = statesman.references;
+			baseMap = statesman.referencesMap;
 		} else {
-			baseDeps = statesman.deps;
-			baseMap = statesman.depsMap;
+			baseDeps = statesman.observers;
+			baseMap = statesman.observersMap;
 		}
 
-		deps = baseDeps[ keypath ] || ( baseDeps[ keypath ] = [] );
-		deps[ deps.length ] = dependant;
+		dependants = baseDeps[ keypath ] || ( baseDeps[ keypath ] = [] );
+		dependants[ dependants.length ] = dependant;
 
 		// update dependants map
 		keys = keypath.split( '.' );

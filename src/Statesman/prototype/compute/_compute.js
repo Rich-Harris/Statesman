@@ -1,29 +1,29 @@
 define([
-	'Statesman/prototype/compute/Computed'
+	'Statesman/prototype/compute/Computation'
 ], function (
-	Computed
+	Computation
 ) {
 
 	'use strict';
 
 	return function ( keypath, signature ) {
-		var result, k, computed;
+		var result, k, computation;
 
 		if ( typeof keypath === 'object' ) {
 			result = {};
 
 			for ( k in keypath ) {
 				if ( keypath.hasOwnProperty( k ) ) {
-					computed = new Computed( this, k, keypath[k] );
-					result[k] = computed.value;
+					computation = new Computation( this, k, keypath[k] );
+					result[k] = computation.value;
 				}
 			}
 
 			return result;
 		}
 
-		computed = new Computed( this, keypath, signature );
-		return computed.value;
+		computation = new Computation( this, keypath, signature );
+		return computation.value;
 	};
 
 });

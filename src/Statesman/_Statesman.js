@@ -1,5 +1,6 @@
 define([
 	'circular',
+	'utils/create',
 	'utils/defineProperties',
 	'Statesman/prototype/add',
 	'Statesman/prototype/compute/_compute',
@@ -20,6 +21,7 @@ define([
 	'Statesman/extend/_extend'
 ], function (
 	circular,
+	create,
 	defineProperties,
 	add,
 	compute,
@@ -47,28 +49,28 @@ define([
 			data: { value: data || {}, writable: true },
 
 			// Events
-			subs: { value: {}, writable: true },
+			subs: { value: create( null ), writable: true },
 
 			// Internal value cache
-			cache: { value: {} },
-			cacheMap: { value: {} },
+			cache: { value: create( null ) },
+			cacheMap: { value: create( null ) },
 
 			// Observers
-			deps: { value: {} },
-			depsMap: { value: {} },
+			observers: { value: create( null ) },
+			observersMap: { value: create( null ) },
 
 			// Computed value references
-			refs: { value: {} },
-			refsMap: { value: {} },
+			references: { value: create( null ) },
+			referencesMap: { value: create( null ) },
 
 			// Computed values
-			computed: { value: {} },
+			computations: { value: create( null ) },
 
 			// Subsets
-			subsets: { value: {} },
+			subsets: { value: create( null ) },
 
 			// Deferred updates (i.e. computed values with more than one reference)
-			deferred: { value: [] },
+			deferredComputations: { value: [] },
 
 			// Place to store model changes prior to notifying consumers
 			changes: { value: null, writable: true },
